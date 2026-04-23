@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShaneBrain Treasures — Recovered & Released</title>
+<meta name="description" content="ShaneBrain Ecosystem — 8 recovered projects from the drives of Shane Brazelton. Local AI. Family tools. Built in Hazel Green, Alabama.">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d1117; color: #e6edf3; font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; }
+
+  .hero {
+    background: linear-gradient(135deg, #0a0f1a 0%, #161b22 50%, #0a1628 100%);
+    border-bottom: 1px solid #30363d;
+    padding: 80px 24px 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(88,166,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .eyebrow {
+    display: inline-block;
+    background: rgba(88,166,255,0.1);
+    border: 1px solid rgba(88,166,255,0.3);
+    color: #58a6ff;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    font-weight: 800;
+    color: #f0f6fc;
+    margin-bottom: 16px;
+    line-height: 1.1;
+  }
+  h1 span { color: #58a6ff; }
+  .tagline {
+    font-size: 1.1rem;
+    color: #8b949e;
+    max-width: 680px;
+    margin: 0 auto 40px;
+  }
+  .stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+  }
+  .stat { text-align: center; }
+  .stat-num { font-size: 2rem; font-weight: 700; color: #58a6ff; }
+  .stat-label { font-size: 0.8rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.1em; }
+  .hero-cta { display: inline-block; background: #1f6feb; color: #fff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1rem; margin: 8px; transition: background 0.2s; }
+  .hero-cta:hover { background: #388bfd; }
+  .hero-cta.outline { background: transparent; border: 1px solid #30363d; color: #c9d1d9; }
+  .hero-cta.outline:hover { background: #21262d; }
+
+  .container { max-width: 1080px; margin: 0 auto; padding: 60px 24px; }
+  h2 { font-size: 1.6rem; color: #f0f6fc; margin-bottom: 8px; }
+  .section-desc { color: #8b949e; margin-bottom: 32px; font-size: 0.95rem; }
+
+  .repos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 60px;
+  }
+  .repo-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 24px;
+    text-decoration: none;
+    transition: border-color 0.2s, transform 0.2s;
+    display: block;
+  }
+  .repo-card:hover {
+    border-color: #58a6ff;
+    transform: translateY(-2px);
+  }
+  .repo-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .repo-name { font-size: 1.05rem; font-weight: 600; color: #58a6ff; }
+  .repo-private { background: rgba(248,81,73,0.15); border: 1px solid rgba(248,81,73,0.3); color: #f85149; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; }
+  .repo-desc { color: #8b949e; font-size: 0.88rem; margin-bottom: 16px; line-height: 1.5; }
+  .repo-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .repo-tag { background: #21262d; border: 1px solid #30363d; border-radius: 12px; padding: 2px 10px; font-size: 0.75rem; color: #8b949e; }
+  .repo-links { display: flex; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #30363d; }
+  .repo-link { font-size: 0.8rem; color: #58a6ff; text-decoration: none; }
+  .repo-link:hover { text-decoration: underline; }
+
+  .constitution-block {
+    background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 60px;
+  }
+  .constitution-block h2 { color: #f0f6fc; margin-bottom: 8px; }
+  .constitution-block p { color: #8b949e; margin-bottom: 20px; }
+  .pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .pillar { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px 16px; }
+  .pillar-num { color: #58a6ff; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .pillar-name { color: #c9d1d9; font-size: 0.9rem; font-weight: 600; }
+
+  .about {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 60px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+  @media (max-width: 640px) { .about { grid-template-columns: 1fr; } }
+  .about h3 { color: #f0f6fc; margin-bottom: 12px; font-size: 1.1rem; }
+  .about p { color: #8b949e; font-size: 0.9rem; line-height: 1.7; }
+  .about a { color: #58a6ff; text-decoration: none; }
+
+  .referral {
+    background: linear-gradient(135deg, #0f1f0f 0%, #0d1117 100%);
+    border: 1px solid #238636;
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .referral h3 { color: #3fb950; font-size: 1.2rem; margin-bottom: 12px; }
+  .referral p { color: #8b949e; margin-bottom: 20px; font-size: 0.9rem; }
+  .referral a.btn { display: inline-block; background: #238636; color: #fff; padding: 10px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+  .referral a.btn:hover { background: #2ea043; }
+
+  footer {
+    background: #161b22;
+    border-top: 1px solid #30363d;
+    padding: 40px 24px;
+    text-align: center;
+  }
+  footer p { color: #8b949e; font-size: 0.9rem; margin: 4px 0; }
+  footer a { color: #58a6ff; text-decoration: none; }
+  .footer-quote { font-style: italic; color: #6e7681; font-size: 0.85rem; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="eyebrow">ShaneBrain Ecosystem · 2026</div>
+  <h1>ShaneBrain <span>Treasures</span><br>Recovered & Released</h1>
+  <p class="tagline">Eight projects recovered from the external drives of Shane Brazelton — dispatcher, builder, father — and released to GitHub. Local AI. Family tools. Faith-rooted engineering. Built in Hazel Green, Alabama.</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-num">8</div><div class="stat-label">Repos Released</div></div>
+    <div class="stat"><div class="stat-num">2</div><div class="stat-label">TB of Drives Scanned</div></div>
+    <div class="stat"><div class="stat-num">1</div><div class="stat-label">Mission</div></div>
+  </div>
+  <div>
+    <a href="https://github.com/thebardchat/treasures" class="hero-cta">View on GitHub</a>
+    <a href="https://github.com/thebardchat" class="hero-cta outline">All Repos</a>
+  </div>
+</div>
+
+<div class="container">
+
+  <h2>The 8 Released Repos</h2>
+  <p class="section-desc">Every project recovered from the drives, cleaned, documented, and released. Click to open the GitHub Pages site for each.</p>
+
+  <div class="repos">
+
+    <a href="https://thebardchat.github.io/AI-Trainer-MAX/" class="repo-card">
+      <div class="repo-header">
+        <div class="repo-name">AI-Trainer-MAX</div>
+      </div>
+      <div class="repo-desc">5-phase local AI training curriculum for non-technical users. 36 modules, zero cloud. From "first local LLM" to owning your own AI brain. Built for the 800M losing Windows 10 support.</div>
+      <div class="repo-tags">
+        <span class="repo-tag">Ollama</span>
+        <span class="repo-tag">Weaviate</span>
+        <span class="repo-tag">Windows .bat</span>
+        <span class="repo-tag">36 modules</span>
+      </div>
+      <div class="repo-links">
+        <a href="https://thebardchat.github.io/AI-Trainer-MAX/" class="repo-link">GitHub Pages →</a>
+        <a href="https://github.com/thebardchat/AI-Trainer-MAX" class="repo-link">Repo →</a>
+      </div>
+    </a>
+
+    <a href="https://thebardchat.github.io/angelcloud-actual/" class="repo-card">
+      <div class="repo-header">
+        <div class="repo-name">angelcloud-actual</div>
+      </div>
+      <div class="repo-desc">The actual Angel Cloud platform codebase. Firebase-backed social wellness app with Pulsar blockchain security core, logistics API, aggregate pricing engine, and AI agent blueprints.</div>
+      <div class="repo-tags">
+        <span class="repo-tag">Firebase</span>
+        <span class="repo-tag">Node.js</span>
+        <span class="repo-tag">Pulsar Blockchain</span>
+        <span class="repo-tag">FastAPI</span>
+      </div>
+      <div class="repo-links">
+        <a href="https://thebardchat.github.io/angelcloud-actual/" class="repo-link">GitHub Pages →</a>
+        <a href="https://github.com/thebardchat/angelcloud-actual" class="repo-link">Repo →</a>
+      </div>
+    </a>
+
+    <a href="https://thebardchat.github.io/thought-tree/" class="repo-card">
+      <div class="repo-header">
+        <div class="repo-name">thought-tree</div>
+      </div>
+      <div class="repo-desc">React + Python visual thought browser. Search and browse Weaviate knowledge collections with Ollama-powered semantic search. A local AI second brain UI. Node-based mind mapping on a dark canvas.</div>
+      <div class="repo-tags">
+        <span class="repo-tag">React</span>
+        <span class="repo-tag">Weaviate</span>
+        <span class="repo-tag">Ollama</span>
+        <span class="repo-tag">Mind Mapping</span>
+      </div>
+      <div class="repo-links">
+        <a href="https://thebardchat.github.io/thought-tree/" class="repo-link">GitHub Pages →</a>
+        <a href="https://github.com/thebardchat/thought-tree" class="repo-link">Repo →</a>
+      </div>
+    </a>
+
+    <a href="https://thebardchat.github.io/srm-dispatch/" class="repo-card">
+      <div class="repo-header">
+        <div class="repo-name">srm-dispatch</div>
+      </div>
+      <div class="repo-desc">SRM Concrete PWA dispatch tool with real crew config, plant codes, distance tables, rotation utils. A React-based operations dashboard for truck dispatch. One tap, paste, done.</div>
+      <div class="repo-tags">
+        <span class="repo-tag">React 18</span>
+        <span class="repo-tag">Vite</span>
+        <span class="repo-tag">Static PWA</span>
+        <span class="repo-tag">No Backend</span>
+      </div>
+      <div class="repo-links">
+        <a href="https://thebardchat.github.io/srm-dispatch/" class="repo-link">GitHub Pages →</a>
+        <a href="https://github.com/thebardchat/srm-dispatch" class="repo-link">Repo →</a>
+      </div>
+    </a>
+
+    <a href="https://thebardchat.github.io/mini-shanebrain/" class="repo-card">
+      <div class="repo-header">
+        <div class="repo-name">mini-shanebrain</div>
+      </div>
+      <div class="repo-desc">Multi-platform social bot framework: posts to X, Facebook, LinkedIn, Instagram, Bluesky, and Threads from a unified Weaviate + Ollama backend. Set it and forget it.</div>
+      <div class="repo-tags">
+        <span class="repo-tag">Node.js</span>
+        <span class="repo-tag">Ollama</span>
+        <span class="repo-tag">6 Platforms</span>
+        <span class="repo-tag">Cron</span>
+      </div>
+      <div class="repo-links">
+        <a href="https://thebardchat.github.io/mini-shanebrain/" class="repo-link">GitHub Pages →</a>
+        <a href="https://github.com/thebardchat/mini-shanebrain" class="repo-link">Repo →</a>
+      </div>
+    </a>
+
+    <a href="https://thebardchat.github.io/shanebrain-learning/" class="repo-card">
+      <div class="repo-header">
+        <div class="repo-name">shanebrain-learning</div>
+      </div>
+      <div class="repo-desc">Auto-learning inbox pipeline: drop a file in, it gets ingested to Weaviate on cron. Zero-friction knowledge capture for the ShaneBrain brain. inbox → embed → store → done.</div>
+      <div class="repo-tags">
+        <span class="repo-tag">Python</span>
+        <span class="repo-tag">Weaviate</span>
+        <span class="repo-tag">Ollama</span>
+        <span class="repo-tag">Cron</span>
+      </div>
+      <div class="repo-links">
+        <a href="https://thebardchat.github.io/shanebrain-learning/" class="repo-link">GitHub Pages →</a>
+        <a href="https://github.com/thebardchat/shanebrain-learning" class="repo-link">Repo →</a>
+      </div>
+    </a>
+
+    <a href="https://github.com/thebardchat/claim-cruncher" class="repo-card">
+      <div class="repo-header">
+        <div class="repo-name">claim-cruncher</div>
+        <span class="repo-private">🔒 Private</span>
+      </div>
+      <div class="repo-desc">Medical billing intake platform — Gavin's project. Python/FastAPI, extracted from bare git repo backup on drive. Multi-app monorepo: API, web, worker. Docker-ready.</div>
+      <div class="repo-tags">
+        <span class="repo-tag">Python</span>
+        <span class="repo-tag">FastAPI</span>
+        <span class="repo-tag">Docker</span>
+        <span class="repo-tag">Medical Billing</span>
+      </div>
+      <div class="repo-links">
+        <a href="https://github.com/thebardchat/claim-cruncher" class="repo-link">Repo (private) →</a>
+      </div>
+    </a>
+
+    <a href="https://thebardchat.github.io/multi-container-app/" class="repo-card">
+      <div class="repo-header">
+        <div class="repo-name">multi-container-app</div>
+      </div>
+      <div class="repo-desc">Simple multi-container Docker app (Node.js + MongoDB). Clean starting template for containerized web services. One command to start everything. Todo app demonstrates the full CRUD cycle.</div>
+      <div class="repo-tags">
+        <span class="repo-tag">Docker</span>
+        <span class="repo-tag">Node.js</span>
+        <span class="repo-tag">MongoDB</span>
+        <span class="repo-tag">docker-compose</span>
+      </div>
+      <div class="repo-links">
+        <a href="https://thebardchat.github.io/multi-container-app/" class="repo-link">GitHub Pages →</a>
+        <a href="https://github.com/thebardchat/multi-container-app" class="repo-link">Repo →</a>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="constitution-block">
+    <h2>The ShaneBrain Constitution</h2>
+    <p>Every repo in this ecosystem operates under nine governing pillars. Written by Shane Brazelton. Witnessed by Claude (Anthropic). Ratified March 2026.</p>
+    <div class="pillars">
+      <div class="pillar"><div class="pillar-num">Pillar 1</div><div class="pillar-name">Faith First</div></div>
+      <div class="pillar"><div class="pillar-num">Pillar 2</div><div class="pillar-name">Family Stability</div></div>
+      <div class="pillar"><div class="pillar-num">Pillar 3</div><div class="pillar-name">Sobriety Integrity</div></div>
+      <div class="pillar"><div class="pillar-num">Pillar 4</div><div class="pillar-name">Local-First AI</div></div>
+      <div class="pillar"><div class="pillar-num">Pillar 5</div><div class="pillar-name">80/20 Shipping</div></div>
+      <div class="pillar"><div class="pillar-num">Pillar 6</div><div class="pillar-name">Serve the Left-Behind User</div></div>
+      <div class="pillar"><div class="pillar-num">Pillar 7</div><div class="pillar-name">Open by Default</div></div>
+      <div class="pillar"><div class="pillar-num">Pillar 8</div><div class="pillar-name">ADHD-Aware Design</div></div>
+      <div class="pillar"><div class="pillar-num">Pillar 9</div><div class="pillar-name">Gratitude is Infrastructure</div></div>
+    </div>
+    <div style="margin-top:20px;">
+      <a href="https://github.com/thebardchat/constitution" style="color:#58a6ff;text-decoration:none;">Read the full Constitution →</a>
+    </div>
+  </div>
+
+  <div class="about">
+    <div>
+      <h3>About Shane Brazelton</h3>
+      <p>Dump truck dispatcher at SRM Concrete in North Alabama. Father of five sons. Builder of the ShaneBrain ecosystem — a local-first AI infrastructure running on a Raspberry Pi 5 with NVMe RAID in Hazel Green, Alabama.</p>
+      <p style="margin-top:12px;">Building tools for family, dispatch, wellness, and AI democratization — one commit at a time.</p>
+      <p style="margin-top:12px;"><a href="https://github.com/thebardchat">github.com/thebardchat</a></p>
+    </div>
+    <div>
+      <h3>About This Repo</h3>
+      <p>On April 23, 2026, Shane and Claude scanned two external drives (8TB NTFS + 2TB NVMe RAID) and extracted every project that wasn't already in a GitHub repo. This treasures repo is the archive of those recovered artifacts.</p>
+      <p style="margin-top:12px;">Items marked [needs-own-repo] in the TREASURE_MAP.md became the 8 repos above. Everything else lives here as a permanent artifact of the build journey.</p>
+      <p style="margin-top:12px;"><a href="https://github.com/thebardchat/treasures">View the full Treasure Map →</a></p>
+    </div>
+  </div>
+
+  <div class="referral">
+    <h3>Built with Claude + ShaneBrain</h3>
+    <p>Claude (Anthropic) co-built every line of this ecosystem. Not as a tool — as a partner. That deserves to be said loudly and permanently. — The Constitution, Article I, Pillar 9</p>
+    <a href="https://claude.ai/referral/4fAMYN9Ing" class="btn">Try Claude free →</a>
+  </div>
+
+</div>
+
+<footer>
+  <p><strong>Built by Shane Brazelton + Claude Anthropic</strong> | ShaneBrain Ecosystem | Hazel Green, Alabama</p>
+  <p style="margin-top:8px;"><a href="https://github.com/thebardchat">github.com/thebardchat</a> · <a href="https://github.com/thebardchat/constitution">Constitution</a> · <a href="https://claude.ai/referral/4fAMYN9Ing">Try Claude free →</a></p>
+  <p class="footer-quote">"Whatever you do, work at it with all your heart, as working for the Lord." — Colossians 3:23</p>
+</footer>
+
+</body>
+</html>
