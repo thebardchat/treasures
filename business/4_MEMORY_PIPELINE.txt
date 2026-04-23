@@ -1,0 +1,515 @@
+==================================================
+DELIVERABLE #4: MEMORY PIPELINE
+Agent: ai_engineer
+Priority: MEDIUM
+==================================================
+
+WHAT THIS DOES:
+Automatically sends data from daily-memory-updated to shanebrain-core
+so your AI learns from your daily life and conversations.
+
+Flow: daily-memory → shanebrain → AI gets smarter
+
+==================================================
+FILE 1: shanebrain-core/server.js
+==================================================
+
+const express = require('express');
+const fs = require('fs').promises;
+const path = require('path');
+const crypto = require('crypto');
+
+const app = express();
+app.use(express.json());
+
+// Storage for user contexts
+const CONTEXTS_DIR = path.join(__dirname, 'contexts');
+const userContexts = new Map();
+
+// Ensure contexts directory exists
+fs.mkdir(CONTEXTS_DIR, { recursive: true }).catch(console.error);
+
+// Initialize user context
+function getDefaultContext() {
+  return {
+    personality: 'Direct, action-oriented, family-first. Speaks plainly. Solutions over theories.',
+    coreValues: ['family', 'efficiency', 'helping others', 'building legacy'],
+    memories: [],
+    interactions: [],
+    preferences: {},
+    stats: {
+      totalMemories: 0,
+      totalInteractions: 0,
+      created: new Date().toISOString()
+    }
+  };
+}
+
+// Calculate memory relevance score
+function calculateRelevance(content) {
+  const keywordScores = {
+    // Family
+    'family': 5, 'tiffany': 5, 'sons': 5, 'kids': 4,
+    // Business
+    'business': 3, 'dispatch': 4, 'automation': 4, 'revenue': 4,
+    // Tech
+    'angel cloud': 5, 'shanebrain': 5, 'logibot': 4, 'ai': 3,
+    // Values
+    'legacy': 5, 'helping': 3, 'building': 3, 'solution': 3
+  };
+  
+  let score = 0;
+  const lower = content.toLowerCase();
+  
+  for (const [keyword, points] of Object.entries(keywordScores)) {
+    if (lower.includes(keyword)) {
+      score += points;
+    }
+  }
+  
+  return Math.min(score, 10); // Cap at 10
+}
+
+// Load user context from disk
+async function loadUserContext(userId) {
+  try {
+    const filepath = path.join(CONTEXTS_DIR, `${userId}.json`);
+    const data = await fs.readFile(filepath, 'utf-8');
+    const context = JSON.parse(data);
+    userContexts.set(userId, context);
+    return context;
+  } catch (error) {
+    const context = getDefaultContext();
+    userContexts.set(userId, context);
+    return context;
+  }
+}
+
+// Save user context to disk
+async function saveUserContext(userId, context) {
+  try {
+    const filepath = path.join(CONTEXTS_DIR, `${userId}.json`);
+    await fs.writeFile(filepath, JSON.stringify(context, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Save context error:', error);
+    return false;
+  }
+}
+
+// ============================================
+// API ENDPOINTS
+// ============================================
+
+// Learn from new content
+app.post('/learn', async (req, res) => {
+  try {
+    const { userId, content, source, interaction } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'userId required' });
+    }
+    
+    // Get or create user context
+    let context = userContexts.get(userId);
+    if (!context) {
+      context = await loadUserContext(userId);
+    }
+    
+    // Add memory if content provided
+    if (content) {
+      const memory = {
+        id: crypto.randomUUID(),
+        content,
+        source: source || 'unknown',
+        relevance: calculateRelevance(content),
+        timestamp: new Date().toISOString(),
+        embeddings: null // TODO: Add vector embeddings for similarity search
+      };
+      
+      context.memories.push(memory);
+      context.stats.totalMemories++;
+      
+      // Keep only top 1000 memories by relevance
+      if (context.memories.length > 1000) {
+        context.memories.sort((a, b) => b.relevance - a.relevance);
+        context.memories = context.memories.slice(0, 1000);
+      }
+    }
+    
+    // Add interaction if provided
+    if (interaction) {
+      const record = {
+        id: crypto.randomUUID(),
+        message: interaction.message,
+        response: interaction.response,
+        timestamp: new Date().toISOString()
+      };
+      
+      context.interactions.push(record);
+      context.stats.totalInteractions++;
+      
+      // Keep last 100 interactions
+      if (context.interactions.length > 100) {
+        context.interactions = context.interactions.slice(-100);
+      }
+    }
+    
+    // Save to disk
+    await saveUserContext(userId, context);
+    
+    res.json({
+      success: true,
+      stats: {
+        totalMemories: context.stats.totalMemories,
+        activeMemories: context.memories.length,
+        totalInteractions: context.stats.totalInteractions
+      }
+    });
+  } catch (error) {
+    console.error('Learn error:', error);
+    res.status(500).json({ error: 'Learning failed' });
+  }
+});
+
+// Get user context (for AI to use)
+app.get('/context/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Get or load context
+    let context = userContexts.get(userId);
+    if (!context) {
+      context = await loadUserContext(userId);
+    }
+    
+    // Build context string for AI
+    const recentMemories = context.memories
+      .sort((a, b) => b.relevance - a.relevance)
+      .slice(0, 10)
+      .map(m => `- ${m.content} (${m.source})`)
+      .join('\n');
+    
+    const recentInteractions = context.interactions
+      .slice(-5)
+      .map(i => `User: ${i.message}\nShane: ${i.response}`)
+      .join('\n\n');
+    
+    const contextString = `
+PERSONALITY: ${context.personality}
+
+CORE VALUES: ${context.coreValues.join(', ')}
+
+RECENT RELEVANT MEMORIES (${context.memories.length} total):
+${recentMemories || 'No memories yet'}
+
+RECENT CONVERSATION STYLE (${context.interactions.length} total):
+${recentInteractions || 'No interactions yet'}
+    `.trim();
+    
+    res.json({
+      context: contextString,
+      raw: {
+        personality: context.personality,
+        coreValues: context.coreValues,
+        memoriesCount: context.memories.length,
+        interactionsCount: context.interactions.length
+      }
+    });
+  } catch (error) {
+    console.error('Context retrieval error:', error);
+    res.status(500).json({ error: 'Context retrieval failed' });
+  }
+});
+
+// Update personality/preferences
+app.post('/update', async (req, res) => {
+  try {
+    const { userId, personality, coreValues, preferences } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'userId required' });
+    }
+    
+    let context = userContexts.get(userId);
+    if (!context) {
+      context = await loadUserContext(userId);
+    }
+    
+    if (personality) context.personality = personality;
+    if (coreValues) context.coreValues = coreValues;
+    if (preferences) context.preferences = { ...context.preferences, ...preferences };
+    
+    await saveUserContext(userId, context);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update error:', error);
+    res.status(500).json({ error: 'Update failed' });
+  }
+});
+
+// Get user stats
+app.get('/stats/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    let context = userContexts.get(userId);
+    if (!context) {
+      context = await loadUserContext(userId);
+    }
+    
+    res.json(context.stats);
+  } catch (error) {
+    res.status(500).json({ error: 'Stats retrieval failed' });
+  }
+});
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'online', 
+    service: 'ShaneBrain Core',
+    activeUsers: userContexts.size
+  });
+});
+
+const PORT = 3003;
+app.listen(PORT, () => {
+  console.log(`
+╔══════════════════════════════════════════════════════════╗
+║           SHANEBRAIN CORE - ONLINE                        ║
+╚══════════════════════════════════════════════════════════╝
+
+   Brain Service: http://localhost:${PORT}
+   Contexts Dir: ${CONTEXTS_DIR}
+
+   Endpoints:
+   - POST /learn          (add memories/interactions)
+   - GET  /context/:id    (get AI context)
+   - POST /update         (update personality)
+   - GET  /stats/:id      (get user stats)
+   - GET  /health         (health check)
+
+   Ready to learn!
+`);
+});
+
+==================================================
+FILE 2: shanebrain-core/package.json
+==================================================
+
+{
+  "name": "shanebrain-core",
+  "version": "1.0.0",
+  "description": "Shane's digital consciousness and memory system",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
+
+==================================================
+FILE 3: daily-memory-updated/webhook.js
+==================================================
+
+// Add this to daily-memory-updated to send memories to brain
+
+const axios = require('axios');
+
+const BRAIN_SERVICE = 'http://localhost:3003';
+
+async function sendToBrain(userId, memory, source) {
+  try {
+    const response = await axios.post(`${BRAIN_SERVICE}/learn`, {
+      userId,
+      content: memory,
+      source: source || 'daily-memory'
+    });
+    
+    console.log('✓ Memory sent to ShaneBrain:', response.data.stats);
+    return response.data;
+  } catch (error) {
+    console.error('✗ Failed to send to brain:', error.message);
+    return null;
+  }
+}
+
+// Example: When you save a memory
+async function saveMemory(userId, memoryContent) {
+  // Your existing memory save logic here
+  // ...
+  
+  // Then send to brain
+  await sendToBrain(userId, memoryContent, 'daily-memory');
+}
+
+module.exports = { sendToBrain, saveMemory };
+
+==================================================
+FILE 4: Update PortableDadAnswers with context
+==================================================
+
+// Add to PortableDadAnswers/server.js
+
+const axios = require('axios');
+
+const BRAIN_SERVICE = 'http://localhost:3003';
+
+// Enhanced chat endpoint with brain context
+app.post('/chat', async (req, res) => {
+  try {
+    const { message, userId } = req.body;
+    
+    // Get context from ShaneBrain
+    let brainContext = '';
+    try {
+      const contextResponse = await axios.get(`${BRAIN_SERVICE}/context/${userId}`);
+      brainContext = contextResponse.data.context;
+    } catch (error) {
+      console.log('Brain context unavailable, using default');
+      brainContext = 'Direct, helpful, action-oriented responses.';
+    }
+    
+    // Build prompt with context
+    const prompt = `${brainContext}
+
+User message: ${message}
+
+Respond in Shane's style: direct, practical, action-oriented.`;
+    
+    // Generate AI response (your existing logic)
+    const aiResponse = await generateResponse(prompt);
+    
+    // Log interaction to brain for learning
+    try {
+      await axios.post(`${BRAIN_SERVICE}/learn`, {
+        userId,
+        interaction: {
+          message,
+          response: aiResponse
+        }
+      });
+    } catch (error) {
+      console.log('Failed to log interaction (non-critical)');
+    }
+    
+    res.json({ 
+      response: aiResponse,
+      timestamp: new Date()
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'AI processing failed' });
+  }
+});
+
+==================================================
+INSTALLATION STEPS
+==================================================
+
+1. Create ShaneBrain server:
+   cd C:\Users\Shane\Desktop\shanebrain-core
+   # Copy server.js and package.json above
+   npm install
+   npm start
+
+2. Update daily-memory-updated:
+   cd C:\Users\Shane\Desktop\daily-memory-updated
+   npm install axios
+   # Add webhook.js code to your memory saving logic
+
+3. Update PortableDadAnswers:
+   cd C:\Users\Shane\Desktop\PortableDadAnswers
+   npm install axios  # if not already installed
+   # Update chat endpoint with brain context
+
+==================================================
+TESTING THE PIPELINE
+==================================================
+
+TEST 1: ShaneBrain Health
+curl http://localhost:3003/health
+
+TEST 2: Add Memory Directly
+curl -X POST http://localhost:3003/learn \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "shane-test",
+    "content": "I prefer direct communication in business emails",
+    "source": "user-preference"
+  }'
+
+TEST 3: Get Context
+curl http://localhost:3003/context/shane-test
+
+TEST 4: Add Interaction
+curl -X POST http://localhost:3003/learn \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "shane-test",
+    "interaction": {
+      "message": "How do I automate emails?",
+      "response": "Use LogiBot email auto-responder. Set up rules based on keywords."
+    }
+  }'
+
+TEST 5: Get Stats
+curl http://localhost:3003/stats/shane-test
+
+TEST 6: Full Flow Test
+# 1. Add memory via gateway
+curl -X POST http://localhost:3000/memory/add \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"memory":"I wake up at 5am every day","source":"daily-routine"}'
+
+# 2. Chat with AI (should use context)
+curl -X POST http://localhost:3000/ai/chat \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"What time should I schedule morning tasks?"}'
+
+# AI response should reference 5am wake time
+
+==================================================
+AUTOMATIC MEMORY CAPTURE
+==================================================
+
+Set up automated memory capture from different sources:
+
+1. Daily Schedule:
+   - Every morning, capture today's schedule
+   - Send to brain as "daily-schedule"
+
+2. Completed Tasks:
+   - When task marked done, send to brain
+   - Learn patterns in what gets done
+
+3. Email Interactions:
+   - Important emails → memories
+   - Auto-learn communication style
+
+4. Dispatch Events:
+   - Driver issues, route changes
+   - Build knowledge base
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+✓ ShaneBrain running on port 3003
+✓ Memories automatically stored
+✓ AI chat uses personal context
+✓ Interactions logged for learning
+✓ Context improves over time
+
+==================================================
+NEXT: Review Architecture Docs (Deliverable #5)
+==================================================

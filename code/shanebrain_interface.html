@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shane Brain - Angel Cloud Neural Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #threejs-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .interface-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .chat-panel {
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            right: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(0, 17, 0, 0.9);
+            border: 1px solid #00ff41;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            pointer-events: auto;
+            transform: translateY(100%);
+            transition: transform 0.5s ease;
+        }
+
+        .chat-panel.active {
+            transform: translateY(0);
+        }
+
+        .chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #00ff41;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 255, 65, 0.1);
+        }
+
+        .chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            padding: 15px 20px;
+            font-size: 14px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-content {
+            background: rgba(0, 255, 65, 0.2);
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 70%;
+            border: 1px solid rgba(0, 255, 65, 0.3);
+        }
+
+        .message.user .message-content {
+            background: rgba(0, 136, 255, 0.2);
+            border-color: rgba(0, 136, 255, 0.3);
+        }
+
+        .chat-input-area {
+            padding: 15px 20px;
+            border-top: 1px solid #00ff41;
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 255, 65, 0.05);
+        }
+
+        .chat-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+        }
+
+        .send-btn {
+            background: #00ff41;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .send-btn:hover {
+            background: #40ff80;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.7);
+        }
+
+        .angel-builder-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 17, 0, 0.8);
+            border: 1px solid #00ff41;
+            border-radius: 10px;
+            padding: 15px;
+            min-width: 280px;
+            backdrop-filter: blur(5px);
+            pointer-events: auto;
+        }
+
+        .angel-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: rgba(0, 255, 65, 0.1);
+            border-radius: 6px;
+        }
+
+        .angel-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff41;
+            animation: pulse 2s infinite;
+        }
+
+        .metrics-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 17, 0, 0.8);
+            border: 1px solid #00ff41;
+            border-radius: 10px;
+            padding: 15px;
+            backdrop-filter: blur(5px);
+            pointer-events: auto;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .metric-value {
+            color: #00ff41;
+            font-weight: bold;
+        }
+
+        .logo-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 0 30px #ffffff;
+            pointer-events: none;
+            z-index: 50;
+            transition: opacity 0.5s;
+        }
+
+        .logo-overlay.fade {
+            opacity: 0.3;
+        }
+
+        .connection-status {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 17, 0, 0.8);
+            border: 1px solid #00ff41;
+            border-radius: 10px;
+            padding: 10px 15px;
+            font-size: 12px;
+            backdrop-filter: blur(5px);
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-online {
+            background: #00ff41;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        .status-offline {
+            background: #ff0040;
+            box-shadow: 0 0 10px #ff0040;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .controls-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 17, 0, 0.8);
+            border: 1px solid #00ff41;
+            border-radius: 10px;
+            padding: 15px;
+            backdrop-filter: blur(5px);
+            pointer-events: auto;
+        }
+
+        .control-button {
+            background: transparent;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            padding: 8px 16px;
+            margin: 4px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .control-button:hover {
+            background: rgba(0, 255, 65, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px 15px;
+            color: #40ff80;
+            font-style: italic;
+        }
+
+        .typing-dots {
+            display: inline-flex;
+            gap: 2px;
+        }
+
+        .typing-dot {
+            width: 4px;
+            height: 4px;
+            background: #40ff80;
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="threejs-canvas"></canvas>
+        
+        <div class="interface-overlay">
+            <div class="angel-builder-panel">
+                <div style="color: #00ff41; font-weight: bold; margin-bottom: 10px;">COUNCIL STATUS</div>
+                <div class="angel-status">
+                    <div class="angel-indicator"></div>
+                    <span id="councilStage">Stage: INIT</span>
+                </div>
+                <div class="angel-status">
+                    <div class="angel-indicator"></div>
+                    <span id="councilCycle">Cycle: 0</span>
+                </div>
+                <div class="angel-status">
+                    <div class="angel-indicator"></div>
+                    <span id="councilStatus">Status: Ready</span>
+                </div>
+            </div>
+
+            <div class="metrics-panel">
+                <div style="color: #00ff41; font-weight: bold; margin-bottom: 10px;">REAL-TIME METRICS</div>
+                <div class="metric-item">
+                    <span>API Status:</span>
+                    <span class="metric-value" id="apiStatus">Checking...</span>
+                </div>
+                <div class="metric-item">
+                    <span>Thread ID:</span>
+                    <span class="metric-value" id="threadId">-</span>
+                </div>
+                <div class="metric-item">
+                    <span>Current Stage:</span>
+                    <span class="metric-value" id="currentStage">-</span>
+                </div>
+                <div class="metric-item">
+                    <span>Paused:</span>
+                    <span class="metric-value" id="pausedStatus">-</span>
+                </div>
+            </div>
+
+            <div class="logo-overlay" id="logoOverlay">
+                SHANE BRAIN
+            </div>
+
+            <div class="chat-panel" id="chatPanel">
+                <div class="chat-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="status-indicator status-online" id="chatIndicator"></div>
+                        <span style="font-weight: bold;">Angel Council Communication</span>
+                    </div>
+                    <button class="control-button" onclick="toggleChat()">Close</button>
+                </div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="typing-indicator" id="typingIndicator">
+                    Council is processing
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Send command to Council..." />
+                    <button class="send-btn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+
+            <div class="connection-status" onclick="toggleChat()">
+                <span class="status-indicator status-online" id="connectionIndicator"></span>
+                <span id="connectionText">Connecting to API...</span>
+            </div>
+
+            <div class="controls-panel">
+                <div style="color: #00ff41; font-weight: bold; margin-bottom: 10px;">CONTROLS</div>
+                <button class="control-button" onclick="checkStatus()">Refresh Status</button>
+                <button class="control-button" onclick="toggleAngels()">Toggle Angels</button>
+                <button class="control-button" onclick="resetSystem()">Reset View</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+        
+        class ShaneBrainInterface {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.brain = null;
+                this.angels = [];
+                this.showAngels = true;
+                this.apiConnected = false;
+                this.chatActive = false;
+                this.councilStarted = false;
+                
+                this.init();
+                this.animate();
+                this.connectToAPI();
+                this.startStatusPolling();
+            }
+
+            init() {
+                this.scene = new THREE.Scene();
+                this.scene.fog = new THREE.Fog(0x000000, 50, 500);
+
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 0, 100);
+
+                this.renderer = new THREE.WebGLRenderer({ 
+                    canvas: document.getElementById('threejs-canvas'),
+                    antialias: true,
+                    alpha: true 
+                });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setClearColor(0x000000, 0.8);
+
+                const ambientLight = new THREE.AmbientLight(0x004400, 0.3);
+                this.scene.add(ambientLight);
+
+                const pointLight = new THREE.PointLight(0x00ff44, 1, 200);
+                pointLight.position.set(0, 0, 50);
+                this.scene.add(pointLight);
+
+                this.createBrain();
+                this.createAngels();
+                this.setupControls();
+            }
+
+            createBrain() {
+                const brainGeometry = new THREE.SphereGeometry(25, 64, 64);
+                
+                const brainMaterial = new THREE.ShaderMaterial({
+                    uniforms: {
+                        time: { value: 0 },
+                        color1: { value: new THREE.Color(0x00ff44) },
+                        color2: { value: new THREE.Color(0x0088ff) }
+                    },
+                    vertexShader: `
+                        varying vec3 vPosition;
+                        varying vec3 vNormal;
+                        void main() {
+                            vPosition = position;
+                            vNormal = normal;
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform float time;
+                        uniform vec3 color1;
+                        uniform vec3 color2;
+                        varying vec3 vPosition;
+                        varying vec3 vNormal;
+                        
+                        void main() {
+                            float noise = sin(vPosition.x * 0.1 + time) * 
+                                         cos(vPosition.y * 0.1 + time) * 
+                                         sin(vPosition.z * 0.1 + time);
+                            
+                            float fresnel = pow(1.0 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                            
+                            vec3 baseColor = mix(color1, color2, noise + fresnel);
+                            float alpha = 0.6 + fresnel * 0.4;
+                            
+                            gl_FragColor = vec4(baseColor, alpha);
+                        }
+                    `,
+                    transparent: true,
+                    side: THREE.DoubleSide
+                });
+
+                this.brain = new THREE.Mesh(brainGeometry, brainMaterial);
+                this.scene.add(this.brain);
+            }
+
+            createAngels() {
+                for (let i = 0; i < 50; i++) {
+                    const angelGeometry = new THREE.ConeGeometry(1, 3, 4);
+                    const angelMaterial = new THREE.MeshBasicMaterial({ 
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    
+                    const angel = new THREE.Mesh(angelGeometry, angelMaterial);
+                    
+                    const radius = 60 + Math.random() * 40;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.random() * Math.PI;
+                    
+                    angel.position.x = radius * Math.sin(phi) * Math.cos(theta);
+                    angel.position.y = radius * Math.sin(phi) * Math.sin(theta);
+                    angel.position.z = radius * Math.cos(phi);
+                    
+                    angel.userData = {
+                        velocity: new THREE.Vector3(
+                            (Math.random() - 0.5) * 0.1,
+                            (Math.random() - 0.5) * 0.1,
+                            (Math.random() - 0.5) * 0.1
+                        ),
+                        phase: Math.random() * Math.PI * 2
+                    };
+                    
+                    this.angels.push(angel);
+                    this.scene.add(angel);
+                }
+            }
+
+            setupControls() {
+                let mouseX = 0, mouseY = 0;
+                
+                document.addEventListener('mousemove', (event) => {
+                    mouseX = (event.clientX - window.innerWidth / 2) / window.innerWidth;
+                    mouseY = (event.clientY - window.innerHeight / 2) / window.innerHeight;
+                    
+                    if (this.brain) {
+                        this.brain.rotation.y = mouseX * 0.5;
+                        this.brain.rotation.x = mouseY * 0.5;
+                    }
+                });
+
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+
+                document.getElementById('chatInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        sendMessage();
+                    }
+                });
+            }
+
+            async connectToAPI() {
+                try {
+                    const response = await fetch(`${API_BASE}/status`);
+                    const data = await response.json();
+                    
+                    this.apiConnected = true;
+                    document.getElementById('apiStatus').textContent = 'Connected';
+                    document.getElementById('connectionIndicator').className = 'status-indicator status-online';
+                    document.getElementById('connectionText').textContent = 'API Connected - Click to Chat';
+                    
+                    this.updateStatus(data);
+                    
+                    // Auto-start Council if not running
+                    if (!data.council_running && !this.councilStarted) {
+                        this.councilStarted = true;
+                        await this.startCouncil();
+                    }
+                } catch (error) {
+                    this.apiConnected = false;
+                    document.getElementById('apiStatus').textContent = 'Offline';
+                    document.getElementById('connectionIndicator').className = 'status-indicator status-offline';
+                    document.getElementById('connectionText').textContent = 'API Offline - Start shanebrain_api.py';
+                    console.error('API connection failed:', error);
+                }
+            }
+
+            async startCouncil() {
+                try {
+                    const response = await fetch(`${API_BASE}/start`, {
+                        method: 'POST'
+                    });
+                    const data = await response.json();
+                    console.log('Council started:', data);
+                } catch (error) {
+                    console.error('Failed to start Council:', error);
+                }
+            }
+
+            updateStatus(data) {
+                document.getElementById('threadId').textContent = data.thread_id.substring(0, 20) + '...';
+                document.getElementById('currentStage').textContent = data.current_stage;
+                document.getElementById('pausedStatus').textContent = data.is_paused ? 'Yes' : 'No';
+                
+                document.getElementById('councilStage').textContent = `Stage: ${data.current_stage}`;
+                document.getElementById('councilCycle').textContent = `Cycle: ${data.cycle_count}`;
+                document.getElementById('councilStatus').textContent = data.is_paused ? 'Awaiting Input' : 'Processing';
+            }
+
+            startStatusPolling() {
+                setInterval(() => {
+                    if (this.apiConnected) {
+                        this.connectToAPI();
+                    }
+                }, 3000);
+            }
+
+            addMessage(sender, content) {
+                const messagesContainer = document.getElementById('chatMessages');
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${sender}`;
+                
+                messageElement.innerHTML = `
+                    <div class="message-content">${content}</div>
+                `;
+                
+                messagesContainer.appendChild(messageElement);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            async sendCommand(message) {
+                if (!this.apiConnected) {
+                    this.addMessage('system', 'Error: API not connected. Start shanebrain_api.py first.');
+                    return;
+                }
+
+                this.addMessage('user', message);
+                document.getElementById('typingIndicator').style.display = 'block';
+
+                try {
+                    const response = await fetch(`${API_BASE}/chat`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ message: message })
+                    });
+
+                    const data = await response.json();
+                    
+                    document.getElementById('typingIndicator').style.display = 'none';
+                    
+                    if (data.status === 'interrupted') {
+                        this.addMessage('council', data.new_message);
+                    } else if (data.status === 'completed') {
+                        this.addMessage('council', data.message);
+                    }
+                    
+                    await this.connectToAPI();
+                } catch (error) {
+                    document.getElementById('typingIndicator').style.display = 'none';
+                    this.addMessage('system', `Error: ${error.message}`);
+                }
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                const time = Date.now() * 0.001;
+                
+                if (this.brain && this.brain.material.uniforms) {
+                    this.brain.material.uniforms.time.value = time;
+                }
+                
+                const logo = document.getElementById('logoOverlay');
+                if (this.chatActive) {
+                    logo.classList.add('fade');
+                } else {
+                    logo.classList.remove('fade');
+                }
+                
+                if (this.showAngels) {
+                    this.angels.forEach((angel) => {
+                        angel.userData.phase += 0.02;
+                        angel.position.add(angel.userData.velocity);
+                        
+                        const radius = angel.position.length();
+                        if (radius > 100 || radius < 50) {
+                            angel.userData.velocity.multiplyScalar(-1);
+                        }
+                        
+                        angel.position.y += Math.sin(angel.userData.phase) * 0.1;
+                        angel.lookAt(angel.position.clone().add(angel.userData.velocity));
+                    });
+                }
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        let brainInterface;
+
+        function toggleChat() {
+            const chatPanel = document.getElementById('chatPanel');
+            const isActive = chatPanel.classList.contains('active');
+            
+            if (isActive) {
+                chatPanel.classList.remove('active');
+                brainInterface.chatActive = false;
+            } else {
+                chatPanel.classList.add('active');
+                brainInterface.chatActive = true;
+                document.getElementById('chatInput').focus();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            brainInterface.sendCommand(message);
+            input.value = '';
+        }
+
+        function toggleAngels() {
+            brainInterface.showAngels = !brainInterface.showAngels;
+            brainInterface.angels.forEach(angel => {
+                angel.visible = brainInterface.showAngels;
+            });
+        }
+
+        function checkStatus() {
+            brainInterface.connectToAPI();
+        }
+
+        function resetSystem() {
+            brainInterface.showAngels = true;
+            brainInterface.angels.forEach(angel => {
+                angel.visible = true;
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            brainInterface = new ShaneBrainInterface();
+        });
+    </script>
+</body>
+</html>

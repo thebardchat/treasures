@@ -1,0 +1,455 @@
+==================================================
+WEEK 2 - DELIVERABLE #3: PRODUCTION OPTIMIZATION
+Agent: devops_engineer
+Priority: HIGH
+==================================================
+
+WHAT THIS DOES:
+Prepare your system for production deployment with:
+- Process management (PM2)
+- Environment configs
+- Database migrations
+- Monitoring & logging
+- Deployment scripts
+
+==================================================
+FILE 1: ecosystem.config.js (PM2 Configuration)
+==================================================
+
+Create in: C:\Users\Shane\Desktop\ecosystem.config.js
+
+module.exports = {
+  apps: [
+    {
+      name: 'auth-service',
+      script: './auth-service/server.js',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3001
+      }
+    },
+    {
+      name: 'api-gateway',
+      script: './api-gateway/server.js',
+      instances: 2,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3000
+      }
+    },
+    {
+      name: 'shanebrain-core',
+      script: './shanebrain-core/server.js',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '2G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3003
+      }
+    },
+    {
+      name: 'logibot-core',
+      script: './logibot-core/server.js',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3004
+      }
+    },
+    {
+      name: 'payment-service',
+      script: './payment-service/server.js',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3006
+      }
+    },
+    {
+      name: 'dashboard',
+      script: './dashboard/server.js',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '512M',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3007
+      }
+    }
+  ]
+};
+
+==================================================
+FILE 2: Install PM2
+==================================================
+
+npm install -g pm2
+
+==================================================
+FILE 3: Production Start Script
+==================================================
+
+Create: start-production.bat
+
+@echo off
+cls
+echo ========================================
+echo STARTING ANGEL CLOUD - PRODUCTION MODE
+echo ========================================
+echo.
+
+REM Check if PM2 is installed
+pm2 --version >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: PM2 not installed
+    echo Run: npm install -g pm2
+    pause
+    exit /b 1
+)
+
+echo Starting all services with PM2...
+cd C:\Users\Shane\Desktop
+pm2 start ecosystem.config.js
+
+echo.
+echo Waiting for services to start...
+timeout /t 5 >nul
+
+echo.
+echo ========================================
+echo ANGEL CLOUD - PRODUCTION RUNNING
+echo ========================================
+echo.
+
+pm2 status
+
+echo.
+echo Commands:
+echo   pm2 status        - View all services
+echo   pm2 logs          - View logs
+echo   pm2 monit         - Monitor in real-time
+echo   pm2 restart all   - Restart all services
+echo   pm2 stop all      - Stop all services
+echo.
+echo Dashboard: http://localhost:3007
+echo API Gateway: http://localhost:3000
+echo.
+
+pause
+
+==================================================
+FILE 4: Environment Configuration
+==================================================
+
+Create .env files for each service:
+
+auth-service/.env:
+NODE_ENV=production
+PORT=3001
+JWT_SECRET=your-super-secret-jwt-key-change-this
+DATABASE_URL=postgresql://user:pass@localhost:5432/angelcloud
+
+api-gateway/.env:
+NODE_ENV=production
+PORT=3000
+
+shanebrain-core/.env:
+NODE_ENV=production
+PORT=3003
+CONTEXTS_DIR=./contexts
+
+logibot-core/.env:
+NODE_ENV=production
+PORT=3004
+
+payment-service/.env:
+NODE_ENV=production
+PORT=3006
+STRIPE_SECRET_KEY=sk_live_YOUR_LIVE_KEY
+STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_LIVE_KEY
+WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET
+
+==================================================
+FILE 5: Database Migration (PostgreSQL)
+==================================================
+
+Install PostgreSQL:
+1. Download from: https://www.postgresql.org/download/windows/
+2. Run installer
+3. Set password (remember it!)
+4. Keep default port 5432
+
+Create database:
+psql -U postgres
+CREATE DATABASE angelcloud;
+\q
+
+Create tables:
+
+-- users table
+CREATE TABLE users (
+  id VARCHAR(255) PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  tier VARCHAR(50) DEFAULT 'free',
+  customer_id VARCHAR(255),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- usage table
+CREATE TABLE usage (
+  id SERIAL PRIMARY KEY,
+  user_id VARCHAR(255) REFERENCES users(id),
+  action VARCHAR(100),
+  amount INT DEFAULT 1,
+  timestamp TIMESTAMP DEFAULT NOW()
+);
+
+-- memories table
+CREATE TABLE memories (
+  id VARCHAR(255) PRIMARY KEY,
+  user_id VARCHAR(255) REFERENCES users(id),
+  content TEXT,
+  source VARCHAR(100),
+  relevance INT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- automations table
+CREATE TABLE automations (
+  id SERIAL PRIMARY KEY,
+  user_id VARCHAR(255) REFERENCES users(id),
+  rule_name VARCHAR(255),
+  trigger_type VARCHAR(100),
+  result TEXT,
+  executed_at TIMESTAMP DEFAULT NOW()
+);
+
+==================================================
+FILE 6: Logging Setup
+==================================================
+
+Install Winston:
+npm install winston --save
+
+Create logger.js in each service:
+
+const winston = require('winston');
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ 
+      filename: 'error.log', 
+      level: 'error' 
+    }),
+    new winston.transports.File({ 
+      filename: 'combined.log' 
+    })
+  ]
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple()
+  }));
+}
+
+module.exports = logger;
+
+Usage in server.js:
+const logger = require('./logger');
+logger.info('Server started');
+logger.error('Something failed', { error: err });
+
+==================================================
+FILE 7: Health Check Monitoring
+==================================================
+
+Create: health-monitor.js
+
+const axios = require('axios');
+
+const services = [
+  { name: 'Auth', url: 'http://localhost:3001/health' },
+  { name: 'Gateway', url: 'http://localhost:3000/health' },
+  { name: 'Brain', url: 'http://localhost:3003/health' },
+  { name: 'LogiBot', url: 'http://localhost:3004/health' },
+  { name: 'Payment', url: 'http://localhost:3006/health' },
+  { name: 'Dashboard', url: 'http://localhost:3007/health' }
+];
+
+async function checkHealth() {
+  console.log('\n🏥 Health Check:', new Date().toLocaleTimeString());
+  
+  for (const service of services) {
+    try {
+      await axios.get(service.url, { timeout: 2000 });
+      console.log(`  ✓ ${service.name}: Online`);
+    } catch (error) {
+      console.log(`  ✗ ${service.name}: OFFLINE`);
+      // Send alert (email, SMS, etc.)
+    }
+  }
+}
+
+// Check every 5 minutes
+setInterval(checkHealth, 5 * 60 * 1000);
+checkHealth();
+
+Run with PM2:
+pm2 start health-monitor.js --name health-monitor
+
+==================================================
+FILE 8: Backup Script
+==================================================
+
+Create: backup.bat
+
+@echo off
+set BACKUP_DIR=C:\Users\Shane\Desktop\backups
+set DATE=%date:~-4,4%%date:~-10,2%%date:~-7,2%
+
+echo Creating backup for %DATE%...
+
+REM Backup ShaneBrain contexts
+xcopy C:\Users\Shane\Desktop\shanebrain-core\contexts %BACKUP_DIR%\%DATE%\contexts /E /I /Y
+
+REM Backup database
+pg_dump -U postgres angelcloud > %BACKUP_DIR%\%DATE%\database.sql
+
+REM Backup .env files
+copy C:\Users\Shane\Desktop\*\.env %BACKUP_DIR%\%DATE%\env\ /Y
+
+echo Backup complete: %BACKUP_DIR%\%DATE%
+
+Schedule this with Windows Task Scheduler (daily at 2am)
+
+==================================================
+FILE 9: Security Checklist
+==================================================
+
+□ Change all default secrets in .env files
+□ Use HTTPS in production (not HTTP)
+□ Enable rate limiting in API Gateway
+□ Set up firewall rules
+□ Use strong JWT secrets (32+ characters)
+□ Enable CORS only for your domain
+□ Keep dependencies updated (npm audit)
+□ Use environment variables (never hardcode)
+□ Enable 2FA for critical accounts
+□ Regular security audits
+
+==================================================
+FILE 10: Performance Optimization
+==================================================
+
+1. Enable Redis caching:
+   npm install redis
+
+   Cache frequently accessed data:
+   - User contexts
+   - Subscription status
+   - Usage limits
+
+2. Database indexing:
+   CREATE INDEX idx_user_email ON users(email);
+   CREATE INDEX idx_usage_user_id ON usage(user_id);
+   CREATE INDEX idx_memories_user_id ON memories(user_id);
+
+3. API Gateway rate limiting:
+   npm install express-rate-limit
+
+   const rateLimit = require('express-rate-limit');
+   
+   const limiter = rateLimit({
+     windowMs: 15 * 60 * 1000, // 15 minutes
+     max: 100 // limit each IP to 100 requests per windowMs
+   });
+   
+   app.use(limiter);
+
+==================================================
+DEPLOYMENT CHECKLIST
+==================================================
+
+BEFORE LAUNCH:
+□ PM2 installed and configured
+□ All .env files created with production values
+□ PostgreSQL database created and migrated
+□ Stripe webhook configured
+□ Health monitoring running
+□ Backup script scheduled
+□ Security checklist completed
+□ Load testing performed
+□ Error logging configured
+□ Domain configured (if applicable)
+
+LAUNCH:
+□ Run: start-production.bat
+□ Verify: pm2 status shows all services online
+□ Test: API Gateway health check
+□ Test: User registration/login
+□ Test: Payment flow (test mode first!)
+□ Monitor: pm2 logs for 30 minutes
+□ Verify: Dashboard shows correct data
+
+POST-LAUNCH:
+□ Monitor error logs daily
+□ Check backup success
+□ Review usage metrics
+□ Monitor revenue
+□ Collect user feedback
+□ Plan feature updates
+
+==================================================
+COST ESTIMATES
+==================================================
+
+Local/VPS Hosting (Recommended for start):
+- DigitalOcean Droplet: $12/month (2GB RAM)
+- Domain: $12/year
+- SSL Certificate: Free (Let's Encrypt)
+TOTAL: ~$15/month
+
+Cloud Hosting (Scale later):
+- AWS/Azure: $50-200/month
+- Redis cache: $15/month
+- Database: $20/month
+- CDN: $10/month
+TOTAL: $95-245/month
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+✓ All services auto-restart on crash
+✓ Logs captured for debugging
+✓ Health monitoring alerts on failure
+✓ Daily backups automated
+✓ Production-grade security
+✓ Performance optimized
+✓ Ready for 1000+ users
+
+==================================================

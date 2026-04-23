@@ -1,0 +1,5 @@
+inbox/
+processed/
+logs/
+*.log
+__pycache__/

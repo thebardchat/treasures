@@ -1,0 +1,473 @@
+==================================================
+WEEK 2 - DELIVERABLE #1: STRIPE PAYMENT INTEGRATION
+Agent: payment_specialist
+Priority: CRITICAL
+==================================================
+
+WHAT THIS DOES:
+Adds subscription tiers (Free/Pro/Enterprise) with Stripe payments.
+Users can upgrade, track usage, and auto-bill monthly.
+
+==================================================
+SETUP: Get Stripe Keys
+==================================================
+
+1. Go to: https://dashboard.stripe.com/register
+2. Create account (use shane@theangel.cloud)
+3. Get API keys from: https://dashboard.stripe.com/test/apikeys
+4. Copy:
+   - Publishable key (starts with pk_test_)
+   - Secret key (starts with sk_test_)
+
+==================================================
+FILE 1: payment-service/package.json
+==================================================
+
+{
+  "name": "payment-service",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "stripe": "^14.0.0",
+    "cors": "^2.8.5"
+  }
+}
+
+==================================================
+FILE 2: payment-service/.env
+==================================================
+
+STRIPE_SECRET_KEY=sk_test_YOUR_KEY_HERE
+STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_KEY_HERE
+WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET
+
+==================================================
+FILE 3: payment-service/server.js
+==================================================
+
+const express = require('express');
+const cors = require('cors');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
+
+const app = express();
+app.use(express.json());
+app.use(cors());
+
+// Subscription tiers
+const PLANS = {
+  free: {
+    name: 'Free',
+    price: 0,
+    limits: {
+      aiRequests: 100,
+      memoryStorage: 1000,
+      automations: 5
+    }
+  },
+  pro: {
+    name: 'Pro',
+    price: 2900, // $29.00 in cents
+    priceId: 'price_PLACEHOLDER', // Create in Stripe dashboard
+    limits: {
+      aiRequests: 10000,
+      memoryStorage: 100000,
+      automations: 100
+    }
+  },
+  enterprise: {
+    name: 'Enterprise',
+    price: 9900, // $99.00 in cents
+    priceId: 'price_PLACEHOLDER', // Create in Stripe dashboard
+    limits: {
+      aiRequests: -1, // unlimited
+      memoryStorage: -1,
+      automations: -1
+    }
+  }
+};
+
+// Mock user database (replace with real DB)
+const users = new Map();
+
+// Create checkout session
+app.post('/create-checkout-session', async (req, res) => {
+  try {
+    const { userId, tier, email } = req.body;
+    
+    if (!['pro', 'enterprise'].includes(tier)) {
+      return res.status(400).json({ error: 'Invalid tier' });
+    }
+    
+    const plan = PLANS[tier];
+    
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Angel Cloud ${plan.name}`,
+            description: `AI Requests: ${plan.limits.aiRequests === -1 ? 'Unlimited' : plan.limits.aiRequests}/month`
+          },
+          unit_amount: plan.price,
+          recurring: {
+            interval: 'month'
+          }
+        },
+        quantity: 1
+      }],
+      mode: 'subscription',
+      success_url: 'http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'http://localhost:3000/cancel',
+      client_reference_id: userId,
+      customer_email: email
+    });
+    
+    res.json({ sessionId: session.id, url: session.url });
+  } catch (error) {
+    console.error('Checkout error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create customer portal session
+app.post('/create-portal-session', async (req, res) => {
+  try {
+    const { customerId } = req.body;
+    
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: 'http://localhost:3000/dashboard'
+    });
+    
+    res.json({ url: session.url });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get subscription status
+app.get('/subscription/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = users.get(userId);
+    if (!user) {
+      return res.json({ tier: 'free', ...PLANS.free });
+    }
+    
+    if (user.customerId) {
+      const subscriptions = await stripe.subscriptions.list({
+        customer: user.customerId,
+        status: 'active',
+        limit: 1
+      });
+      
+      if (subscriptions.data.length > 0) {
+        const sub = subscriptions.data[0];
+        return res.json({
+          tier: user.tier,
+          status: sub.status,
+          currentPeriodEnd: sub.current_period_end,
+          cancelAtPeriodEnd: sub.cancel_at_period_end,
+          limits: PLANS[user.tier].limits
+        });
+      }
+    }
+    
+    res.json({ tier: 'free', ...PLANS.free });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Check usage limits
+app.post('/check-limit', async (req, res) => {
+  try {
+    const { userId, action } = req.body;
+    
+    const user = users.get(userId) || { tier: 'free', usage: {} };
+    const limits = PLANS[user.tier].limits;
+    
+    const usageKey = action; // 'aiRequests', 'memoryStorage', 'automations'
+    const currentUsage = user.usage[usageKey] || 0;
+    const limit = limits[usageKey];
+    
+    const allowed = limit === -1 || currentUsage < limit;
+    const remaining = limit === -1 ? -1 : limit - currentUsage;
+    
+    res.json({
+      allowed,
+      remaining,
+      limit,
+      current: currentUsage,
+      tier: user.tier
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Track usage
+app.post('/track-usage', async (req, res) => {
+  try {
+    const { userId, action, amount = 1 } = req.body;
+    
+    let user = users.get(userId);
+    if (!user) {
+      user = { tier: 'free', usage: {} };
+      users.set(userId, user);
+    }
+    
+    user.usage[action] = (user.usage[action] || 0) + amount;
+    
+    res.json({ 
+      success: true, 
+      usage: user.usage[action],
+      limit: PLANS[user.tier].limits[action]
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Webhook handler
+app.post('/webhook', express.raw({type: 'application/json'}), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body, 
+      sig, 
+      process.env.WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+  
+  // Handle the event
+  switch (event.type) {
+    case 'checkout.session.completed':
+      const session = event.data.object;
+      const userId = session.client_reference_id;
+      const customerId = session.customer;
+      
+      // Upgrade user
+      let user = users.get(userId) || {};
+      user.customerId = customerId;
+      user.tier = session.line_items?.data[0]?.price?.unit_amount === 2900 ? 'pro' : 'enterprise';
+      user.usage = {};
+      users.set(userId, user);
+      
+      console.log(`✓ User ${userId} upgraded to ${user.tier}`);
+      break;
+      
+    case 'customer.subscription.deleted':
+      const subscription = event.data.object;
+      // Downgrade user to free
+      for (const [uid, u] of users.entries()) {
+        if (u.customerId === subscription.customer) {
+          u.tier = 'free';
+          u.usage = {};
+          console.log(`✓ User ${uid} downgraded to free`);
+        }
+      }
+      break;
+  }
+  
+  res.json({received: true});
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'online', service: 'Payment Service' });
+});
+
+const PORT = 3006;
+app.listen(PORT, () => {
+  console.log(`
+╔══════════════════════════════════════════════════════════╗
+║         PAYMENT SERVICE - ONLINE                          ║
+╚══════════════════════════════════════════════════════════╝
+
+   Payment Service: http://localhost:${PORT}
+
+   Subscription Tiers:
+   - Free:       $0/mo   (100 AI requests)
+   - Pro:        $29/mo  (10,000 AI requests)
+   - Enterprise: $99/mo  (Unlimited)
+
+   Endpoints:
+   - POST /create-checkout-session
+   - POST /create-portal-session
+   - GET  /subscription/:userId
+   - POST /check-limit
+   - POST /track-usage
+   - POST /webhook
+
+   Ready for payments!
+`);
+});
+
+==================================================
+FILE 4: Update API Gateway to include payment routes
+==================================================
+
+Add to api-gateway/server.js:
+
+const SERVICES = {
+  auth: 'http://localhost:3001',
+  ai: 'http://localhost:3002',
+  brain: 'http://localhost:3003',
+  logibot: 'http://localhost:3004',
+  memory: 'http://localhost:3005',
+  payment: 'http://localhost:3006'  // ADD THIS
+};
+
+// Add payment routes
+app.post('/payment/checkout', verifyToken, async (req, res) => {
+  try {
+    const response = await axios.post(`${SERVICES.payment}/create-checkout-session`, {
+      ...req.body,
+      userId: req.user.id,
+      email: req.user.email
+    });
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({ error: 'Payment service unavailable' });
+  }
+});
+
+app.get('/payment/subscription', verifyToken, async (req, res) => {
+  try {
+    const response = await axios.get(`${SERVICES.payment}/subscription/${req.user.id}`);
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({ error: 'Payment service unavailable' });
+  }
+});
+
+// Usage middleware (check limits before AI requests)
+const checkUsageLimit = async (req, res, next) => {
+  try {
+    const response = await axios.post(`${SERVICES.payment}/check-limit`, {
+      userId: req.user.id,
+      action: 'aiRequests'
+    });
+    
+    if (!response.data.allowed) {
+      return res.status(429).json({ 
+        error: 'Usage limit reached',
+        limit: response.data.limit,
+        tier: response.data.tier,
+        upgradeUrl: 'http://localhost:3000/upgrade'
+      });
+    }
+    
+    next();
+  } catch (error) {
+    next(); // Allow request if payment service is down
+  }
+};
+
+// Apply to AI routes
+app.post('/ai/chat', verifyToken, checkUsageLimit, async (req, res) => {
+  // ... existing code
+  
+  // Track usage after successful request
+  axios.post(`${SERVICES.payment}/track-usage`, {
+    userId: req.user.id,
+    action: 'aiRequests'
+  }).catch(err => console.log('Usage tracking failed'));
+});
+
+==================================================
+INSTALLATION STEPS
+==================================================
+
+1. Create folder:
+   cd C:\Users\Shane\Desktop
+   mkdir payment-service
+   cd payment-service
+
+2. Create package.json and server.js
+
+3. Create .env with your Stripe keys
+
+4. Install:
+   npm install
+
+5. Start:
+   npm start
+
+==================================================
+STRIPE DASHBOARD SETUP
+==================================================
+
+1. Create Products:
+   - Go to Products → Add Product
+   - Name: "Angel Cloud Pro"
+   - Price: $29.00 monthly recurring
+   - Copy the Price ID → put in PLANS.pro.priceId
+
+2. Repeat for Enterprise ($99/mo)
+
+3. Set up Webhook:
+   - Webhooks → Add endpoint
+   - URL: http://localhost:3006/webhook
+   - Events: checkout.session.completed, customer.subscription.deleted
+   - Copy signing secret → put in .env WEBHOOK_SECRET
+
+==================================================
+TESTING
+==================================================
+
+1. Create checkout session:
+curl -X POST http://localhost:3000/payment/checkout \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"tier":"pro"}'
+
+2. Opens Stripe checkout page - use test card:
+   4242 4242 4242 4242
+   Any future date
+   Any 3-digit CVC
+
+3. Check subscription:
+curl http://localhost:3000/payment/subscription \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+✓ Users can upgrade to Pro/Enterprise
+✓ Usage limits enforced
+✓ Stripe handles billing automatically
+✓ Webhooks update user tier
+✓ Customer portal for managing subscription
+
+==================================================
+REVENUE PROJECTIONS
+==================================================
+
+If you get:
+- 100 Free users (word of mouth)
+- 10 Pro users ($29/mo) = $290/mo
+- 2 Enterprise ($99/mo) = $198/mo
+
+TOTAL: $488/month = $5,856/year
+
+Scale to 1000 users:
+- 900 Free
+- 80 Pro = $2,320/mo
+- 20 Enterprise = $1,980/mo
+
+TOTAL: $4,300/month = $51,600/year
+
+==================================================

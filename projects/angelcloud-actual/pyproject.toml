@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "angel-cloud-auth-bridge"
+version = "1.0.0"
+authors = [
+  { name="Shane", email="shane@example.com" },
+]
+description = "A Flask-based authentication bridge for Angel Cloud."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+dependencies = [
+    "Flask",
+    "python-dotenv",
+    "requests",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/example/angel-cloud-auth-bridge"
+"Bug Tracker" = "https://github.com/example/angel-cloud-auth-bridge/issues"
+
+[tool.setuptools]
+py-modules = ["api"]

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Finance Command Center</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Load Babel for JSX support -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Load Lucide Icons (Development Version for Browser) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body { background-color: #f8fafc; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // Icons
+        const { Wallet, CreditCard, PiggyBank, ArrowDownCircle, ArrowUpCircle, Plus, Trash2, AlertCircle, Calendar, CheckCircle, XCircle } = lucide;
+
+        const Card = ({ children, className = "" }) => (
+            <div className={`bg-white rounded-xl shadow-sm border border-slate-200 ${className}`}>
+                {children}
+            </div>
+        );
+
+        const Button = ({ children, onClick, variant = "primary", className = "" }) => {
+            const baseStyle = "px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2";
+            const variants = {
+                primary: "bg-blue-600 text-white hover:bg-blue-700",
+                secondary: "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                danger: "bg-red-50 text-red-600 hover:bg-red-100",
+                outline: "border border-slate-300 text-slate-600 hover:bg-slate-50"
+            };
+            return (
+                <button onClick={onClick} className={`${baseStyle} ${variants[variant]} ${className}`}>
+                    {children}
+                </button>
+            );
+        };
+
+        function FamilyFinanceDashboard() {
+            // INITIAL STATE
+            const [accounts, setAccounts] = React.useState([
+                { 
+                    id: 1, 
+                    name: "Shane's Bill Pay", 
+                    type: 'checking', 
+                    balance: 554.17, 
+                    note: '...5202 (After pending Affirms)' 
+                },
+                { 
+                    id: 2, 
+                    name: "Tiffany's Daily Card", 
+                    type: 'checking', 
+                    balance: 228.04, 
+                    note: '...4331 (After pending charges)' 
+                },
+                { 
+                    id: 3, 
+                    name: "Family Savings", 
+                    type: 'savings', 
+                    balance: 0.00, 
+                    note: '...0122' 
+                }
+            ]);
+
+            const [incomes, setIncomes] = React.useState([
+                { id: 1, source: "Shane Paycheck 1", amount: 0, frequency: "Monthly" },
+                { id: 2, source: "Shane Paycheck 2", amount: 0, frequency: "Monthly" },
+            ]);
+
+            const [bills, setBills] = React.useState([
+                { id: 1, name: "Progressive Insurance", amount: 180.95, dueDay: "15th", accountId: 1, paid: false },
+                { id: 2, name: "Freedom Mortgage", amount: 1671.00, dueDay: "1st", accountId: 1, paid: false }, 
+                { id: 3, name: "Academy Sports", amount: 40.00, dueDay: "One-time", accountId: 2, paid: false },
+                { id: 4, name: "Affirm (Installments)", amount: 80.55, dueDay: "Monthly", accountId: 1, paid: false }, 
+                { id: 5, name: "Utilities", amount: 275.00, dueDay: "20th", accountId: 1, paid: false },
+            ]);
+
+            const [allocations, setAllocations] = React.useState({
+                groceries: 400,
+                gas: 150,
+                misc: 50
+            });
+
+            // Effect to re-render icons when DOM updates
+            React.useEffect(() => {
+                lucide.createIcons();
+            });
+
+            // Calculations
+            const totalCash = accounts.reduce((acc, curr) => acc + curr.balance, 0);
+            const totalMonthlyIncome = incomes.reduce((acc, curr) => acc + Number(curr.amount), 0);
+            const totalFixedBills = bills.reduce((acc, curr) => acc + Number(curr.amount), 0);
+            const totalAllocated = allocations.groceries + allocations.gas + allocations.misc;
+            
+            const unpaidBills = bills.filter(b => !b.paid).reduce((acc, curr) => acc + curr.amount, 0);
+            const trueLiquidity = totalCash - unpaidBills;
+            
+            // Handlers
+            const handleIncomeChange = (id, field, value) => {
+                setIncomes(incomes.map(inc => inc.id === id ? { ...inc, [field]: value } : inc));
+            };
+
+            const handleBillChange = (id, field, value) => {
+                setBills(bills.map(bill => bill.id === id ? { ...bill, [field]: value } : bill));
+            };
+            
+            const toggleBillPaid = (id) => {
+                setBills(bills.map(bill => bill.id === id ? { ...bill, paid: !bill.paid } : bill));
+            };
+
+            const addBill = () => {
+                const newId = bills.length > 0 ? Math.max(...bills.map(b => b.id)) + 1 : 1;
+                setBills([...bills, { id: newId, name: "New Bill", amount: 0, dueDay: "?", accountId: 1, paid: false }]);
+            };
+
+            const removeBill = (id) => {
+                setBills(bills.filter(b => b.id !== id));
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-800">
+                    <div className="max-w-5xl mx-auto space-y-6">
+                        
+                        {/* Header */}
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <h1 className="text-2xl font-bold text-slate-900">Family Finance Command Center</h1>
+                                <p className="text-slate-500">Updated with recent transactions (Nov 26 - Today)</p>
+                            </div>
+                            <div className={`px-6 py-3 rounded-full font-bold flex items-center gap-2 text-lg shadow-sm ${totalCash < 1000 ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'}`}>
+                                <i data-lucide="wallet" className="w-6 h-6"></i>
+                                Bank Balance: ${totalCash.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            </div>
+                        </div>
+
+                        {/* 0. URGENT CHECK */}
+                        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm">
+                            <div className="flex items-start gap-3">
+                                <i data-lucide="alert-circle" className="w-6 h-6 text-red-600 flex-shrink-0 mt-1"></i>
+                                <div>
+                                    <h3 className="font-bold text-red-900 text-lg">Dec 1st Checkpoint</h3>
+                                    <p className="text-red-800 mb-2">
+                                        Your bank files stop at Nov 26. <b>Has the Mortgage (due Dec 1) come out yet?</b>
+                                        <br/>Check the box below if it is <b>ALREADY PAID</b> and out of the account. Uncheck if it is <b>STILL DUE</b>.
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {bills.filter(b => b.amount > 500).map(bill => (
+                                            <button 
+                                                key={bill.id}
+                                                onClick={() => toggleBillPaid(bill.id)}
+                                                className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold border ${bill.paid ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-white text-slate-500 border-slate-300'}`}
+                                            >
+                                                {bill.paid ? <i data-lucide="check-circle" className="w-4 h-4"></i> : <div className="w-4 h-4 rounded-full border-2 border-slate-300" />}
+                                                {bill.name} (${bill.amount}) is {bill.paid ? "PAID" : "NOT PAID"}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 1. The Accounts */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {accounts.map(acc => (
+                                <Card key={acc.id} className="p-4 border-l-4 border-l-blue-500">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-semibold text-slate-700">{acc.name}</h3>
+                                            <p className="text-xs text-slate-400">{acc.note}</p>
+                                        </div>
+                                        {acc.type === 'savings' ? <i data-lucide="piggy-bank" className="text-blue-400"></i> : <i data-lucide="credit-card" className="text-slate-400"></i>}
+                                    </div>
+                                    <div className={`mt-3 text-2xl font-bold ${acc.balance < 100 ? 'text-red-600' : 'text-slate-800'}`}>
+                                        ${acc.balance.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            
+                            {/* 2. Income */}
+                            <Card className="p-6">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <i data-lucide="arrow-down-circle" className="text-emerald-500 w-6 h-6"></i>
+                                    <h2 className="text-lg font-bold">1. Monthly Income</h2>
+                                </div>
+                                <p className="text-sm text-slate-500 mb-4">Enter exact take-home pay amounts.</p>
+                                
+                                <div className="space-y-3">
+                                    {incomes.map(inc => (
+                                        <div key={inc.id} className="flex gap-3">
+                                            <input 
+                                                type="text" 
+                                                value={inc.source}
+                                                onChange={(e) => handleIncomeChange(inc.id, 'source', e.target.value)}
+                                                className="flex-1 p-2 border rounded bg-slate-50"
+                                            />
+                                            <div className="relative w-32">
+                                                <span className="absolute left-3 top-2 text-slate-400">$</span>
+                                                <input 
+                                                    type="number" 
+                                                    value={inc.amount}
+                                                    onChange={(e) => handleIncomeChange(inc.id, 'amount', e.target.value)}
+                                                    className="w-full p-2 pl-6 border rounded font-semibold text-emerald-700"
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </Card>
+
+                            {/* 3. Bills */}
+                            <Card className="p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <i data-lucide="arrow-up-circle" className="text-red-500 w-6 h-6"></i>
+                                        <h2 className="text-lg font-bold">2. Fixed Bills</h2>
+                                    </div>
+                                    <Button variant="outline" onClick={addBill} className="text-sm py-1 px-3">
+                                        <i data-lucide="plus" className="w-4 h-4"></i> Add Bill
+                                    </Button>
+                                </div>
+                                
+                                <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                                    {bills.map(bill => (
+                                        <div key={bill.id} className={`flex items-center gap-2 p-2 rounded border ${bill.paid ? 'bg-emerald-50 border-emerald-100 opacity-60' : 'bg-white border-slate-200'}`}>
+                                            <button onClick={() => toggleBillPaid(bill.id)} className="text-slate-400 hover:text-emerald-600">
+                                                {bill.paid ? <i data-lucide="check-circle" className="w-5 h-5 text-emerald-500"></i> : <div className="w-5 h-5 rounded-full border-2 border-slate-300" />}
+                                            </button>
+                                            <input 
+                                                type="text" 
+                                                value={bill.name}
+                                                onChange={(e) => handleBillChange(bill.id, 'name', e.target.value)}
+                                                className="flex-1 bg-transparent text-sm font-medium focus:outline-none"
+                                            />
+                                            <div className="relative w-24">
+                                                <span className="absolute left-2 top-1.5 text-slate-400 text-xs">$</span>
+                                                <input 
+                                                    type="number" 
+                                                    value={bill.amount}
+                                                    onChange={(e) => handleBillChange(bill.id, 'amount', e.target.value)}
+                                                    className="w-full p-1 pl-4 text-sm border rounded"
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-4 pt-4 border-t flex justify-between items-center text-sm">
+                                    <span className="text-slate-500">Unpaid Bills Left:</span>
+                                    <span className="font-bold text-red-600">${unpaidBills.toLocaleString()}</span>
+                                </div>
+                            </Card>
+
+                        </div>
+
+                        {/* 4. The Final Calculation */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Card className="p-6 bg-blue-50 border-blue-100">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <i data-lucide="credit-card" className="text-blue-600 w-6 h-6"></i>
+                                    <h2 className="text-lg font-bold text-blue-900">3. Daily Living Allocations</h2>
+                                </div>
+                                
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <label className="font-medium text-blue-900">Groceries/Food</label>
+                                        <input 
+                                            type="number" 
+                                            value={allocations.groceries} 
+                                            onChange={(e) => setAllocations({...allocations, groceries: Number(e.target.value)})}
+                                            className="w-24 p-2 rounded border border-blue-200 text-right"
+                                        />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <label className="font-medium text-blue-900">Gas/Transport</label>
+                                        <input 
+                                            type="number" 
+                                            value={allocations.gas} 
+                                            onChange={(e) => setAllocations({...allocations, gas: Number(e.target.value)})}
+                                            className="w-24 p-2 rounded border border-blue-200 text-right"
+                                        />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <label className="font-medium text-blue-900">Misc/Personal</label>
+                                        <input 
+                                            type="number" 
+                                            value={allocations.misc} 
+                                            onChange={(e) => setAllocations({...allocations, misc: Number(e.target.value)})}
+                                            className="w-24 p-2 rounded border border-blue-200 text-right"
+                                        />
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <Card className="p-6 flex flex-col justify-center">
+                                <h2 className="text-xl font-bold text-slate-800 mb-6 text-center">The Bottom Line</h2>
+                                
+                                <div className="space-y-2 mb-6">
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>Bank Balance (Now)</span>
+                                        <span className="text-slate-800 font-bold">${totalCash.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>Minus Unpaid Bills</span>
+                                        <span className="text-red-500 font-medium">- ${unpaidBills.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-slate-600">
+                                        <span>Minus Living Expenses</span>
+                                        <span className="text-blue-500 font-medium">- ${totalAllocated.toLocaleString()}</span>
+                                    </div>
+                                </div>
+
+                                <div className={`p-6 rounded-xl text-center border-2 ${trueLiquidity - totalAllocated >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                                    <div className="text-sm font-semibold uppercase tracking-wider mb-1">
+                                        True Remaining Cash
+                                    </div>
+                                    <div className={`text-4xl font-black ${trueLiquidity - totalAllocated >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                        ${(trueLiquidity - totalAllocated).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                    </div>
+                                    {trueLiquidity - totalAllocated < 0 && (
+                                        <div className="mt-2 text-red-700 text-sm font-bold">
+                                            WARNING: You do not have enough cash for bills & living.
+                                        </div>
+                                    )}
+                                </div>
+                            </Card>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<FamilyFinanceDashboard />);
+    </script>
+</body>
+</html>

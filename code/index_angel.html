@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Calendar Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #007BFF;
+      color: white;
+    }
+    #refreshBtn {
+      margin: 10px 0;
+      padding: 10px 15px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Order Calendar Dashboard</h1>
+  <button id="refreshBtn">Refresh Orders</button>
+  <table id="ordersTable">
+    <thead>
+      <tr>
+        <th>Pickup</th>
+        <th>Material</th>
+        <th>Dropoff</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Orders will be inserted here -->
+    </tbody>
+  </table>
+
+  <script>
+    async function fetchOrders() {
+      const response = await fetch('http://localhost:3000/orders');
+      const orders = await response.json();
+
+      const tbody = document.querySelector('#ordersTable tbody');
+      tbody.innerHTML = '';
+      orders.forEach(order => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${order.pickup}</td>
+          <td>${order.material}</td>
+          <td>${order.dropoff}</td>
+          <td>${order.time}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', fetchOrders);
+
+    // Auto-load orders on page load
+    fetchOrders();
+  </script>
+</body>
+</html>

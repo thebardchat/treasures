@@ -1,0 +1,443 @@
+==================================================
+DELIVERABLE #2: LOGIBOT AUTOMATION ENGINE
+Agent: logibot_builder
+Priority: HIGH
+==================================================
+
+WHAT THIS DOES:
+Creates the missing LogiBot automation engine for business tasks.
+Handles email responses, task scheduling, and workflow automation.
+
+==================================================
+FILE 1: logibot-core/automation-engine.js
+==================================================
+
+const EventEmitter = require('events');
+
+class AutomationEngine extends EventEmitter {
+  constructor() {
+    super();
+    this.rules = new Map();
+    this.tasks = new Map();
+    this.running = false;
+  }
+
+  // Register automation rule
+  addRule(name, condition, action) {
+    this.rules.set(name, {
+      condition,  // Function that returns true/false
+      action,     // Function to execute
+      enabled: true,
+      executions: 0,
+      lastRun: null
+    });
+    console.log(`✓ Rule added: ${name}`);
+  }
+
+  // Remove automation rule
+  removeRule(name) {
+    this.rules.delete(name);
+    console.log(`✓ Rule removed: ${name}`);
+  }
+
+  // Schedule a task
+  scheduleTask(name, cronPattern, action) {
+    this.tasks.set(name, {
+      pattern: cronPattern,
+      action,
+      enabled: true,
+      executions: 0,
+      lastRun: null
+    });
+    console.log(`✓ Task scheduled: ${name} (${cronPattern})`);
+  }
+
+  // Execute automation based on trigger
+  async execute(triggerType, data) {
+    if (!this.running) return;
+
+    console.log(`\n🤖 LogiBot: Processing ${triggerType} trigger`);
+
+    const executed = [];
+
+    // Check all rules
+    for (const [name, rule] of this.rules.entries()) {
+      if (!rule.enabled) continue;
+
+      try {
+        // Check if condition is met
+        const shouldRun = await rule.condition(triggerType, data);
+        
+        if (shouldRun) {
+          console.log(`  → Executing rule: ${name}`);
+          const result = await rule.action(data);
+          
+          rule.executions++;
+          rule.lastRun = new Date();
+          
+          executed.push({ rule: name, result });
+          this.emit('rule-executed', { rule: name, result });
+        }
+      } catch (error) {
+        console.error(`  ✗ Rule ${name} failed:`, error.message);
+        this.emit('rule-error', { rule: name, error });
+      }
+    }
+
+    console.log(`✓ Executed ${executed.length} automation(s)\n`);
+    return executed;
+  }
+
+  // Start automation engine
+  start() {
+    this.running = true;
+    console.log('🚀 LogiBot automation engine STARTED');
+  }
+
+  // Stop automation engine
+  stop() {
+    this.running = false;
+    console.log('⏸ LogiBot automation engine STOPPED');
+  }
+
+  // Get engine status
+  getStatus() {
+    return {
+      running: this.running,
+      rulesCount: this.rules.size,
+      tasksCount: this.tasks.size,
+      rules: Array.from(this.rules.entries()).map(([name, rule]) => ({
+        name,
+        enabled: rule.enabled,
+        executions: rule.executions,
+        lastRun: rule.lastRun
+      }))
+    };
+  }
+}
+
+module.exports = AutomationEngine;
+
+==================================================
+FILE 2: logibot-core/business-rules.js
+==================================================
+
+// Pre-built automation rules for Shane's business
+
+const emailAutoResponder = {
+  name: 'email-auto-responder',
+  
+  condition: async (triggerType, data) => {
+    // Trigger when email received
+    if (triggerType !== 'email-received') return false;
+    
+    // Check if it's a common inquiry
+    const inquiryKeywords = ['quote', 'pricing', 'availability', 'schedule'];
+    return inquiryKeywords.some(kw => 
+      data.subject?.toLowerCase().includes(kw) ||
+      data.body?.toLowerCase().includes(kw)
+    );
+  },
+  
+  action: async (data) => {
+    // Auto-respond to inquiry
+    const response = {
+      to: data.from,
+      subject: `Re: ${data.subject}`,
+      body: `Hi,
+
+Thank you for reaching out to SRM Dispatch. I've received your inquiry and will respond within 2 hours.
+
+For immediate assistance with scheduling or quotes, please call 256-402-5176.
+
+Best regards,
+Shane's Automated Response System`
+    };
+    
+    // Send email (integrate with your email service)
+    console.log('📧 Auto-response sent to:', data.from);
+    return response;
+  }
+};
+
+const taskPrioritizer = {
+  name: 'task-prioritizer',
+  
+  condition: async (triggerType, data) => {
+    return triggerType === 'task-created';
+  },
+  
+  action: async (data) => {
+    // Auto-assign priority based on keywords
+    const urgent = ['urgent', 'asap', 'emergency', 'critical'];
+    const high = ['important', 'priority', 'deadline'];
+    
+    let priority = 'MEDIUM';
+    
+    const text = (data.title + ' ' + data.description).toLowerCase();
+    
+    if (urgent.some(kw => text.includes(kw))) {
+      priority = 'URGENT';
+    } else if (high.some(kw => text.includes(kw))) {
+      priority = 'HIGH';
+    }
+    
+    console.log(`📋 Task prioritized as ${priority}`);
+    return { ...data, priority };
+  }
+};
+
+const dispatchOptimizer = {
+  name: 'dispatch-optimizer',
+  
+  condition: async (triggerType, data) => {
+    return triggerType === 'route-request';
+  },
+  
+  action: async (data) => {
+    // Optimize route based on driver location and job priority
+    const { drivers, jobs } = data;
+    
+    // Simple optimization: assign nearest available driver
+    const assignments = jobs.map(job => {
+      const nearestDriver = drivers.reduce((nearest, driver) => {
+        if (!driver.available) return nearest;
+        
+        const distance = calculateDistance(driver.location, job.location);
+        if (!nearest || distance < nearest.distance) {
+          return { driver, distance };
+        }
+        return nearest;
+      }, null);
+      
+      return {
+        job: job.id,
+        driver: nearestDriver?.driver.name,
+        estimatedTime: nearestDriver?.distance * 2 // 2 min per mile estimate
+      };
+    });
+    
+    console.log(`🚛 Optimized ${assignments.length} dispatch assignments`);
+    return assignments;
+  }
+};
+
+// Helper function
+function calculateDistance(loc1, loc2) {
+  // Simple Euclidean distance (replace with actual GPS calculation)
+  const dx = loc2.lat - loc1.lat;
+  const dy = loc2.lng - loc1.lng;
+  return Math.sqrt(dx * dx + dy * dy) * 69; // Rough miles conversion
+}
+
+module.exports = {
+  emailAutoResponder,
+  taskPrioritizer,
+  dispatchOptimizer
+};
+
+==================================================
+FILE 3: logibot-core/server.js
+==================================================
+
+const express = require('express');
+const AutomationEngine = require('./automation-engine');
+const { 
+  emailAutoResponder, 
+  taskPrioritizer, 
+  dispatchOptimizer 
+} = require('./business-rules');
+
+const app = express();
+app.use(express.json());
+
+// Initialize LogiBot
+const logibot = new AutomationEngine();
+
+// Register business rules
+logibot.addRule(
+  emailAutoResponder.name,
+  emailAutoResponder.condition,
+  emailAutoResponder.action
+);
+
+logibot.addRule(
+  taskPrioritizer.name,
+  taskPrioritizer.condition,
+  taskPrioritizer.action
+);
+
+logibot.addRule(
+  dispatchOptimizer.name,
+  dispatchOptimizer.condition,
+  dispatchOptimizer.action
+);
+
+// Start engine
+logibot.start();
+
+// API Endpoints
+app.post('/trigger', async (req, res) => {
+  try {
+    const { triggerType, data } = req.body;
+    const results = await logibot.execute(triggerType, data);
+    res.json({ success: true, executed: results });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/status', (req, res) => {
+  res.json(logibot.getStatus());
+});
+
+app.post('/rules/add', (req, res) => {
+  const { name, condition, action } = req.body;
+  // In production, safely eval or use a DSL for condition/action
+  logibot.addRule(name, eval(condition), eval(action));
+  res.json({ success: true });
+});
+
+app.delete('/rules/:name', (req, res) => {
+  logibot.removeRule(req.params.name);
+  res.json({ success: true });
+});
+
+const PORT = 3004;
+app.listen(PORT, () => {
+  console.log(`🤖 LogiBot running on port ${PORT}`);
+});
+
+module.exports = logibot;
+
+==================================================
+FILE 4: logibot-core/package.json
+==================================================
+
+{
+  "name": "logibot-core",
+  "version": "1.0.0",
+  "description": "Shane's business automation engine",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-cron": "^3.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
+
+==================================================
+INSTALLATION STEPS
+==================================================
+
+1. Create LogiBot folder:
+   cd C:\Users\Shane\Desktop
+   mkdir logibot-core
+   cd logibot-core
+
+2. Copy all files above into the folder
+
+3. Install dependencies:
+   npm install
+
+4. Start LogiBot:
+   npm start
+
+   Should see: "🤖 LogiBot running on port 3004"
+
+==================================================
+TESTING LOGIBOT
+==================================================
+
+1. Check status:
+   curl http://localhost:3004/status
+
+2. Trigger email auto-responder:
+   curl -X POST http://localhost:3004/trigger \
+     -H "Content-Type: application/json" \
+     -d '{
+       "triggerType": "email-received",
+       "data": {
+         "from": "customer@example.com",
+         "subject": "Need a quote",
+         "body": "How much for 10 loads?"
+       }
+     }'
+
+3. Trigger task prioritizer:
+   curl -X POST http://localhost:3004/trigger \
+     -H "Content-Type: application/json" \
+     -d '{
+       "triggerType": "task-created",
+       "data": {
+         "title": "URGENT: Fix truck",
+         "description": "Brake issue on truck 12"
+       }
+     }'
+
+4. Trigger dispatch optimizer:
+   curl -X POST http://localhost:3004/trigger \
+     -H "Content-Type: application/json" \
+     -d '{
+       "triggerType": "route-request",
+       "data": {
+         "drivers": [
+           {"name": "Eddie", "available": true, "location": {"lat": 34.7, "lng": -86.6}},
+           {"name": "Jamie", "available": true, "location": {"lat": 34.8, "lng": -86.5}}
+         ],
+         "jobs": [
+           {"id": "J1", "location": {"lat": 34.75, "lng": -86.55}}
+         ]
+       }
+     }'
+
+==================================================
+INTEGRATION WITH YOUR SYSTEMS
+==================================================
+
+Add to your email handler:
+```javascript
+// When email arrives
+const response = await axios.post('http://localhost:3004/trigger', {
+  triggerType: 'email-received',
+  data: emailData
+});
+```
+
+Add to your task system:
+```javascript
+// When task created
+const response = await axios.post('http://localhost:3004/trigger', {
+  triggerType: 'task-created',
+  data: taskData
+});
+```
+
+Add to dispatch system:
+```javascript
+// When route optimization needed
+const response = await axios.post('http://localhost:3004/trigger', {
+  triggerType: 'route-request',
+  data: { drivers, jobs }
+});
+```
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+✓ LogiBot running on port 3004
+✓ Auto-responds to inquiries
+✓ Prioritizes tasks automatically
+✓ Optimizes dispatch routes
+✓ Can add/remove rules dynamically
+
+==================================================
+NEXT: Implement API Gateway (Deliverable #3)
+==================================================

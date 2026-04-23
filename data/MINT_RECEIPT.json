@@ -1,0 +1,11 @@
+{
+  "token_id": "QLAS-001",
+  "contract_address": "0x1234567890abcdef1234567890abcdef12345678",
+  "network": "BNB Testnet",
+  "owner": "@BGKPJRevolution",
+  "minted": "2025-11-10T16:58:00-06:00",
+  "tx_hash": "0xf1e2d3c4b5a6978abcdef1234567890abcdef12",
+  "metadata_uri": "ipfs://QmYourGoldenTicketHash",
+  "ip_proof": "9f8e7d6c5b4a3e2d1f0e9d8c7b6a5f4e",
+  "value": "$499 Eternal License"
+}

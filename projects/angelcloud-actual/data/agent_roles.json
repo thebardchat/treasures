@@ -1,0 +1,18 @@
+
+{
+  "AC_WELLNESS_A001": {
+    "designation": "The Wellness Agent",
+    "allowed_actions": ["DATA_READ", "MODEL_INFERENCE"],
+    "allowed_resources": ["AC_DB_COMMUNICATION_LOGS", "AC_VAULT_WELLNESS_GOALS"]
+  },
+  "AC_DISPATCH_A002": {
+    "designation": "The Dispatch Agent",
+    "allowed_actions": ["EXECUTE_PROGRAM", "DATA_READ", "DATA_WRITE"],
+    "allowed_resources": ["haul_rate_calculator.cpp", "AC_DB_CURRENT_JOB_LEDGER", "AC_GEOSPATIAL_ROUTE_ENGINE"]
+  },
+  "AC_PULSAR_A003": {
+    "designation": "The Pulsar Integrity Agent (Guardian)",
+    "allowed_actions": ["DATA_READ", "EXECUTE_PROGRAM"],
+    "allowed_resources": ["AC_CHAIN_AUDIT_PAC", "AC_DASHBOARD_CONSENSUS_HEALTH", "FORENSICS_DECRYPTOR"]
+  }
+}

@@ -1,0 +1,303 @@
+==================================================
+DELIVERABLE #1: AUTHENTICATION MIDDLEWARE
+Agent: auth_specialist
+Priority: CRITICAL (Do this FIRST)
+==================================================
+
+WHAT THIS DOES:
+Connects angelcloud-actual auth to PortableDadAnswers so users
+login once and access all AI services.
+
+==================================================
+FILE 1: angelcloud-actual/middleware/auth.js
+==================================================
+
+const jwt = require('jsonwebtoken');
+
+// Middleware to verify JWT tokens
+const verifyToken = async (req, res, next) => {
+  try {
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this');
+    
+    // Attach user info to request
+    req.user = {
+      id: decoded.userId,
+      email: decoded.email,
+      tier: decoded.tier || 'free'
+    };
+    
+    next();
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired' });
+    }
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+module.exports = { verifyToken };
+
+==================================================
+FILE 2: angelcloud-actual/routes/auth.js
+==================================================
+
+const express = require('express');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const router = express.Router();
+
+// Mock user database (replace with your actual database)
+const users = new Map();
+
+// Register endpoint
+router.post('/register', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+    
+    // Check if user exists
+    if (users.has(email)) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Create user
+    const user = {
+      id: Date.now().toString(),
+      email,
+      password: hashedPassword,
+      tier: 'free',
+      created: new Date()
+    };
+    
+    users.set(email, user);
+    
+    // Generate token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, tier: user.tier },
+      process.env.JWT_SECRET || 'your-secret-key-change-this',
+      { expiresIn: '24h' }
+    );
+    
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        tier: user.tier
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+// Login endpoint
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+    
+    // Get user
+    const user = users.get(email);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    // Verify password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    // Generate token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, tier: user.tier },
+      process.env.JWT_SECRET || 'your-secret-key-change-this',
+      { expiresIn: '24h' }
+    );
+    
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        tier: user.tier
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Verify token endpoint (for API Gateway)
+router.post('/verify', async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this');
+    
+    res.json({
+      valid: true,
+      user: {
+        id: decoded.userId,
+        email: decoded.email,
+        tier: decoded.tier
+      }
+    });
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+module.exports = router;
+
+==================================================
+FILE 3: Update angelcloud-actual/server.js
+==================================================
+
+// Add these lines to your existing server.js
+
+const authRoutes = require('./routes/auth');
+const { verifyToken } = require('./middleware/auth');
+
+// Public routes
+app.use('/auth', authRoutes);
+
+// Protected routes (require authentication)
+app.use('/api', verifyToken);  // All /api routes now require auth
+
+// Example protected endpoint
+app.get('/api/profile', (req, res) => {
+  res.json({ user: req.user });
+});
+
+==================================================
+FILE 4: Update PortableDadAnswers to accept tokens
+==================================================
+
+// Add to PortableDadAnswers/server.js
+
+const axios = require('axios');
+
+// Auth middleware for PortableDadAnswers
+const authenticateUser = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    // Verify with angelcloud-actual
+    const response = await axios.post('http://localhost:3001/auth/verify', { token });
+    
+    if (response.data.valid) {
+      req.user = response.data.user;
+      next();
+    } else {
+      res.status(401).json({ error: 'Invalid token' });
+    }
+  } catch (error) {
+    res.status(401).json({ error: 'Authentication failed' });
+  }
+};
+
+// Protect AI chat endpoint
+app.post('/chat', authenticateUser, async (req, res) => {
+  // Your existing chat logic here
+  // Now you have req.user available
+  const userId = req.user.id;
+  const message = req.body.message;
+  
+  // ... rest of chat logic
+});
+
+==================================================
+INSTALLATION STEPS
+==================================================
+
+1. Install dependencies in angelcloud-actual:
+   cd C:\Users\Shane\Desktop\angelcloud-actual
+   npm install jsonwebtoken bcrypt
+
+2. Create the middleware folder:
+   mkdir middleware
+
+3. Copy the auth.js code to middleware/auth.js
+
+4. Update or create routes/auth.js with the code above
+
+5. Update server.js to use the auth routes
+
+6. Install axios in PortableDadAnswers:
+   cd C:\Users\Shane\Desktop\PortableDadAnswers
+   npm install axios
+
+7. Update PortableDadAnswers server.js with auth middleware
+
+==================================================
+TESTING
+==================================================
+
+1. Start angelcloud-actual:
+   cd angelcloud-actual
+   npm start  # Should run on port 3001
+
+2. Test registration:
+   curl -X POST http://localhost:3001/auth/register \
+     -H "Content-Type: application/json" \
+     -d '{"email":"shane@test.com","password":"testpass123"}'
+   
+   # Should return: {"token":"...", "user":{...}}
+
+3. Test login:
+   curl -X POST http://localhost:3001/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"shane@test.com","password":"testpass123"}'
+   
+   # Copy the token from response
+
+4. Test protected endpoint:
+   curl http://localhost:3001/api/profile \
+     -H "Authorization: Bearer YOUR_TOKEN_HERE"
+   
+   # Should return user profile
+
+5. Start PortableDadAnswers and test AI chat:
+   curl -X POST http://localhost:3002/chat \
+     -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+     -H "Content-Type: application/json" \
+     -d '{"message":"Hello AI"}'
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+✓ Users can register and login
+✓ JWT tokens are generated
+✓ Tokens work across both services
+✓ AI chat requires authentication
+✓ Invalid tokens are rejected
+
+==================================================
+NEXT: Implement API Gateway (Deliverable #3)
+==================================================

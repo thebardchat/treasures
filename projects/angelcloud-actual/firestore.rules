@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+match /databases/{database}/documents {
+// ------------------------------------------------------------------
+// ANGEL CLOUD AI SECURITY BLUEPRINT (PULSAR SENTINEL)
+// Ensures only authenticated users can access the system.
+// ------------------------------------------------------------------
+
+// Match all documents under the Angel Cloud App Artifacts
+match /artifacts/{appId} {
+
+  // --- 1. PRIVATE USER DATA (e.g., Dispatcher Logic, User Profiles) ---
+  // Path: /artifacts/{appId}/users/{userId}/{collectionName}/{documentId}
+  // ONLY the owner (request.auth.uid) can read or write their data.
+  match /users/{userId}/{documents=**} {
+    allow read, write: if request.auth.uid == userId;
+  }
+
+  // --- 2. PUBLIC COMMUNITY DATA (e.g., LogiBot World Rules) ---
+  // Path: /artifacts/{appId}/public/data/{collectionName}/{documentId}
+  // Allows any authenticated user to read data, but only authenticated
+  // users can create or modify public worlds (supporting Network Community).
+  match /public/data/{collectionName}/{documentId} {
+    // Authenticated users can read (view the public world)
+    allow read: if request.auth != null;
+
+    // Authenticated users can write/create (participate/govern the public world)
+    allow create, update, delete: if request.auth != null;
+  }
+
+  // Deny access to all other paths within /artifacts by default
+  allow read, write: if false;
+}
+
+}
+}

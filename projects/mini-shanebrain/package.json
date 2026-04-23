@@ -1,0 +1,31 @@
+{
+  "name": "mini-shanebrain",
+  "version": "2.0.0",
+  "description": "ADHD-friendly multi-platform social media bot (Facebook, Instagram, LinkedIn)",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dry-run": "node src/index.js --dry-run",
+    "post": "node src/index.js --post",
+    "schedule": "node src/index.js --schedule",
+    "platforms": "node src/index.js --platforms",
+    "token-setup": "node src/token-setup.js"
+  },
+  "keywords": [
+    "facebook",
+    "instagram",
+    "linkedin",
+    "automation",
+    "bot",
+    "social-media"
+  ],
+  "author": "thebardchat",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^16.4.7",
+    "node-cron": "^3.0.3",
+    "sharp": "^0.34.5"
+  }
+}

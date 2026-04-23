@@ -1,0 +1,457 @@
+{
+  "project": "Angel Cloud AI Training Tools",
+  "version": "5.0.0",
+  "base_path": "D:\\Angel_Cloud\\shanebrain-core\\training-tools",
+  "hardware": {
+    "ram_ceiling_gb": 7.4,
+    "module_max_gb": 3.0,
+    "min_free_ram_mb": 2048,
+    "warn_free_ram_mb": 4096
+  },
+  "infrastructure": {
+    "llm": "ollama",
+    "model": "llama3.2:1b",
+    "ollama_url": "http://localhost:11434",
+    "vector_db": "weaviate",
+    "weaviate_url": "http://localhost:8080"
+  },
+  "phases": {
+    "phase-1-builders": {
+      "title": "BUILDERS",
+      "status": "complete",
+      "target_audience": "Developers and technical self-learners",
+      "modules": {
+        "1.1": {
+          "id": "1.1",
+          "title": "Your First Local LLM",
+          "description": "Install Ollama, pull your first model, run your first local inference. No cloud. No API key. Just your machine talking back to you.",
+          "estimated_minutes": 15,
+          "prerequisites": [],
+          "path": "phases/phase-1-builders/module-1.1-first-local-llm",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["ollama install", "model pulling", "CLI inference", "local-first mindset"]
+        },
+        "1.2": {
+          "id": "1.2",
+          "title": "Vectors Made Simple",
+          "description": "Set up Weaviate, turn plain text into vectors, and run your first semantic search. Think of it as giving your AI a filing cabinet with a brain.",
+          "estimated_minutes": 15,
+          "prerequisites": ["1.1"],
+          "path": "phases/phase-1-builders/module-1.2-vectors",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["weaviate setup", "embeddings", "semantic search", "vector storage"]
+        },
+        "1.3": {
+          "id": "1.3",
+          "title": "Build Your Brain",
+          "description": "Connect Ollama + Weaviate into a RAG pipeline. Your AI stops guessing and starts answering from YOUR documents.",
+          "estimated_minutes": 15,
+          "prerequisites": ["1.1", "1.2"],
+          "path": "phases/phase-1-builders/module-1.3-build-your-brain",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["RAG pipeline", "document loading", "context injection", "personal AI"]
+        },
+        "1.4": {
+          "id": "1.4",
+          "title": "Prompt Engineering for Local Models",
+          "description": "Small models need precise instructions. Learn to write prompts that get real answers from a 1-billion parameter model running on your own hardware.",
+          "estimated_minutes": 15,
+          "prerequisites": ["1.1"],
+          "path": "phases/phase-1-builders/module-1.4-prompt-engineering",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["prompt structure", "system prompts", "temperature control", "small model optimization"]
+        },
+        "1.5": {
+          "id": "1.5",
+          "title": "Ship It",
+          "description": "Package everything into a single .bat launcher. Double-click and your personal AI boots up. That's sovereignty.",
+          "estimated_minutes": 15,
+          "prerequisites": ["1.1", "1.2", "1.3", "1.4"],
+          "path": "phases/phase-1-builders/module-1.5-ship-it",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["bat scripting", "health checks", "launcher design", "packaging"]
+        }
+      }
+    },
+    "phase-2-operators": {
+      "title": "OPERATORS",
+      "status": "complete",
+      "target_audience": "Small business owners, dispatchers, hustlers",
+      "modules": {
+        "2.1": {
+          "id": "2.1",
+          "title": "Load Your Business Brain",
+          "description": "Turn your business documents into a searchable AI knowledge base. Pricing, policies, procedures — all indexed and ready to query.",
+          "estimated_minutes": 15,
+          "prerequisites": ["1.5"],
+          "path": "phases/phase-2-operators/module-2.1-load-your-business-brain",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["business knowledge base", "category tagging", "batch ingestion", "source attribution"],
+          "weaviate_class": "BusinessDoc"
+        },
+        "2.2": {
+          "id": "2.2",
+          "title": "The Instant Answer Desk",
+          "description": "Build a Q&A tool that answers business questions with source citations. Ask anything about your business and get a verified answer in seconds.",
+          "estimated_minutes": 15,
+          "prerequisites": ["2.1"],
+          "path": "phases/phase-2-operators/module-2.2-instant-answer-desk",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["source citations", "confidence scoring", "grounded responses", "business Q&A"]
+        },
+        "2.3": {
+          "id": "2.3",
+          "title": "Draft It",
+          "description": "AI message drafting with reusable templates and tone control. Write customer replies, follow-ups, and notices using your real business data.",
+          "estimated_minutes": 20,
+          "prerequisites": ["2.1", "2.2"],
+          "path": "phases/phase-2-operators/module-2.3-draft-it",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["message drafting", "template management", "tone control", "context injection"],
+          "weaviate_class": "DraftTemplate"
+        },
+        "2.4": {
+          "id": "2.4",
+          "title": "Sort and Route",
+          "description": "Message triage — classify incoming messages by category, assign priority, and get suggested actions. Your AI dispatcher.",
+          "estimated_minutes": 15,
+          "prerequisites": ["2.1"],
+          "path": "phases/phase-2-operators/module-2.4-sort-and-route",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["message classification", "priority scoring", "action suggestions", "triage patterns"],
+          "weaviate_class": "MessageLog"
+        },
+        "2.5": {
+          "id": "2.5",
+          "title": "Paperwork Machine",
+          "description": "Generate estimates, reports, checklists, and letters from simple prompts. Your rates, your terms, your format — every time.",
+          "estimated_minutes": 20,
+          "prerequisites": ["2.1", "2.3"],
+          "path": "phases/phase-2-operators/module-2.5-paperwork-machine",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["document generation", "template matching", "structured output", "business documents"],
+          "weaviate_class": "DocTemplate"
+        },
+        "2.6": {
+          "id": "2.6",
+          "title": "Chain Reactions",
+          "description": "Multi-step workflows that chain all your tools together. A message comes in — classify, find policy, draft response, log it. One input, full automation.",
+          "estimated_minutes": 20,
+          "prerequisites": ["2.1", "2.2", "2.3", "2.4", "2.5"],
+          "path": "phases/phase-2-operators/module-2.6-chain-reactions",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["workflow chaining", "multi-step automation", "audit logging", "process automation"],
+          "weaviate_class": "WorkflowLog"
+        },
+        "2.7": {
+          "id": "2.7",
+          "title": "Your Operator Dashboard",
+          "description": "Package every Phase 2 tool into a single-launcher business AI toolkit. Health checks, stats, and all tools in one menu. The capstone.",
+          "estimated_minutes": 15,
+          "prerequisites": ["2.1", "2.2", "2.3", "2.4", "2.5", "2.6"],
+          "path": "phases/phase-2-operators/module-2.7-operator-dashboard",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["dashboard design", "tool integration", "system monitoring", "daily operations"]
+        }
+      }
+    },
+    "phase-3-everyday": {
+      "title": "EVERYDAY USERS",
+      "status": "complete",
+      "target_audience": "The 800 million — non-technical Windows users",
+      "mcp_server": "http://localhost:8100/mcp",
+      "modules": {
+        "3.1": {
+          "id": "3.1",
+          "title": "Your Private Vault",
+          "description": "Store personal documents in your AI vault and search them semantically. Medical info, work references, family notes — all private, all searchable.",
+          "estimated_minutes": 15,
+          "prerequisites": [],
+          "path": "phases/phase-3-everyday/module-3.1-your-private-vault",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["personal vault", "semantic search", "document storage", "MCP tools"],
+          "mcp_tools": ["vault_add", "vault_search", "vault_list_categories"]
+        },
+        "3.2": {
+          "id": "3.2",
+          "title": "Ask Your Vault",
+          "description": "Ask questions and get AI answers grounded in your own documents. Your AI reads your vault, then answers — no hallucination, just your data.",
+          "estimated_minutes": 15,
+          "prerequisites": ["3.1"],
+          "path": "phases/phase-3-everyday/module-3.2-ask-your-vault",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["RAG Q&A", "grounded answers", "vault context", "personal AI assistant"],
+          "mcp_tools": ["vault_search", "chat_with_shanebrain"]
+        },
+        "3.3": {
+          "id": "3.3",
+          "title": "Write It Right",
+          "description": "Generate AI-written drafts that pull from your vault for context. Emails, messages, posts — in your voice, with your data.",
+          "estimated_minutes": 15,
+          "prerequisites": ["3.1"],
+          "path": "phases/phase-3-everyday/module-3.3-write-it-right",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["AI drafting", "vault context", "tone control", "draft management"],
+          "mcp_tools": ["draft_create", "draft_search"]
+        },
+        "3.4": {
+          "id": "3.4",
+          "title": "Lock It Down",
+          "description": "Audit your AI system. Check security logs, review privacy trails, and verify system health. Trust but verify.",
+          "estimated_minutes": 15,
+          "prerequisites": [],
+          "path": "phases/phase-3-everyday/module-3.4-lock-it-down",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["security awareness", "privacy auditing", "system health", "AI transparency"],
+          "mcp_tools": ["security_log_search", "privacy_audit_search", "system_health"]
+        },
+        "3.5": {
+          "id": "3.5",
+          "title": "Daily Briefing",
+          "description": "Journal, track todos, set reminders, and get AI-generated daily briefings. Your AI becomes your daily co-pilot.",
+          "estimated_minutes": 15,
+          "prerequisites": [],
+          "path": "phases/phase-3-everyday/module-3.5-daily-briefing",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["daily notes", "journaling", "AI briefings", "personal productivity"],
+          "mcp_tools": ["daily_note_add", "daily_note_search", "daily_briefing"]
+        },
+        "3.6": {
+          "id": "3.6",
+          "title": "Digital Footprint",
+          "description": "See exactly what your AI knows about you. Audit collections, check categories, search your own entries. Full transparency.",
+          "estimated_minutes": 15,
+          "prerequisites": ["3.1"],
+          "path": "phases/phase-3-everyday/module-3.6-digital-footprint",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["data awareness", "collection auditing", "self-search", "AI transparency"],
+          "mcp_tools": ["privacy_audit_search", "system_health", "vault_list_categories", "search_knowledge"]
+        },
+        "3.7": {
+          "id": "3.7",
+          "title": "Family Dashboard",
+          "description": "The capstone. Pull together every Phase 3 tool into a complete view of your personal AI system. Knowledge, social, vault, notes — all in one view.",
+          "estimated_minutes": 20,
+          "prerequisites": ["3.1", "3.5"],
+          "path": "phases/phase-3-everyday/module-3.7-family-dashboard",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["system overview", "dashboard design", "tool integration", "personal AI mastery"],
+          "mcp_tools": ["system_health", "search_knowledge", "get_top_friends", "vault_search", "daily_note_search", "chat_with_shanebrain"]
+        }
+      }
+    },
+    "phase-4-legacy": {
+      "title": "LEGACY",
+      "status": "complete",
+      "target_audience": "Family, next generation, YourNameBrain users",
+      "mcp_server": "http://localhost:8100/mcp",
+      "modules": {
+        "4.1": {
+          "id": "4.1",
+          "title": "What Is a Brain?",
+          "description": "Understand what a personal AI brain is and why it matters. See ShaneBrain as a living example — knowledge, memory, and personality stored locally.",
+          "estimated_minutes": 15,
+          "prerequisites": [],
+          "path": "phases/phase-4-legacy/module-4.1-what-is-a-brain",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["AI brain concept", "system exploration", "knowledge search", "legacy mindset"],
+          "mcp_tools": ["search_knowledge", "system_health"]
+        },
+        "4.2": {
+          "id": "4.2",
+          "title": "Feed Your Brain",
+          "description": "Add your own knowledge, values, and memories to your AI brain. Family wisdom, life lessons, the things you want remembered.",
+          "estimated_minutes": 15,
+          "prerequisites": ["4.1"],
+          "path": "phases/phase-4-legacy/module-4.2-feed-your-brain",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["knowledge entry", "vault storage", "value encoding", "personal memory"],
+          "mcp_tools": ["add_knowledge", "vault_add"]
+        },
+        "4.3": {
+          "id": "4.3",
+          "title": "Talk to Your Brain",
+          "description": "Have your first real conversation with your personal AI. Ask it questions and watch it answer from YOUR knowledge — not the internet.",
+          "estimated_minutes": 15,
+          "prerequisites": ["4.2"],
+          "path": "phases/phase-4-legacy/module-4.3-talk-to-your-brain",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["RAG conversation", "personal AI chat", "knowledge retrieval", "context awareness"],
+          "mcp_tools": ["chat_with_shanebrain", "search_knowledge"]
+        },
+        "4.4": {
+          "id": "4.4",
+          "title": "Your Daily Companion",
+          "description": "Build a journaling and reflection habit with your AI. Record your days, track your moods, and let the AI brief you each morning.",
+          "estimated_minutes": 15,
+          "prerequisites": [],
+          "path": "phases/phase-4-legacy/module-4.4-your-daily-companion",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["daily journaling", "mood tracking", "AI briefings", "reflection habit"],
+          "mcp_tools": ["daily_note_add", "daily_note_search", "daily_briefing"]
+        },
+        "4.5": {
+          "id": "4.5",
+          "title": "Write Your Story",
+          "description": "Use your AI brain to draft letters, stories, and messages to the people who matter most. Your voice, your data, your words — preserved.",
+          "estimated_minutes": 15,
+          "prerequisites": ["4.2"],
+          "path": "phases/phase-4-legacy/module-4.5-write-your-story",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["legacy writing", "AI drafting", "vault context", "personal storytelling"],
+          "mcp_tools": ["draft_create", "vault_search"]
+        },
+        "4.6": {
+          "id": "4.6",
+          "title": "Guard Your Legacy",
+          "description": "Protect what you built. Audit security logs, review privacy trails, and understand exactly who can see your family's data.",
+          "estimated_minutes": 15,
+          "prerequisites": [],
+          "path": "phases/phase-4-legacy/module-4.6-guard-your-legacy",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["legacy security", "privacy auditing", "data protection", "system monitoring"],
+          "mcp_tools": ["security_log_search", "privacy_audit_search", "system_health"]
+        },
+        "4.7": {
+          "id": "4.7",
+          "title": "Pass It On",
+          "description": "The capstone. Build your own YourNameBrain from scratch — embed family values, add personal memories, test it, and prove it knows you. Your name. Your brain. Your legacy.",
+          "estimated_minutes": 20,
+          "prerequisites": ["4.1", "4.2", "4.3", "4.4", "4.5", "4.6"],
+          "path": "phases/phase-4-legacy/module-4.7-pass-it-on",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["YourNameBrain", "brain building", "legacy creation", "full integration"],
+          "mcp_tools": ["add_knowledge", "vault_add", "chat_with_shanebrain"]
+        }
+      }
+    },
+    "phase-5-multipliers": {
+      "title": "MULTIPLIERS",
+      "status": "complete",
+      "target_audience": "Phase 1-4 graduates ready to defend, teach, connect, and build deeper",
+      "mcp_server": "http://localhost:8100/mcp",
+      "modules": {
+        "5.1": {
+          "id": "5.1",
+          "title": "Lock the Gates",
+          "description": "Go beyond basic security awareness. Scan ports, verify firewall rules, check service exposure on your LAN, and generate a hardening report for your AI stack.",
+          "estimated_minutes": 15,
+          "prerequisites": ["3.4"],
+          "path": "phases/phase-5-multipliers/module-5.1-lock-the-gates",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["port scanning", "firewall verification", "LAN exposure testing", "service hardening", "defense in depth"],
+          "mcp_tools": ["system_health", "security_log_search"],
+          "theme": "DEFENDERS"
+        },
+        "5.2": {
+          "id": "5.2",
+          "title": "Threat Spotter",
+          "description": "Build a threat taxonomy in your knowledge base and use your AI to classify security scenarios by severity. Your brain becomes a security advisor.",
+          "estimated_minutes": 15,
+          "prerequisites": ["5.1", "4.2"],
+          "path": "phases/phase-5-multipliers/module-5.2-threat-spotter",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["threat classification", "security knowledge base", "AI-assisted triage", "severity scoring", "incident patterns"],
+          "mcp_tools": ["add_knowledge", "search_knowledge", "chat_with_shanebrain", "security_log_search"],
+          "theme": "DEFENDERS"
+        },
+        "5.3": {
+          "id": "5.3",
+          "title": "Backup and Restore",
+          "description": "Export your knowledge and vault to local JSON files, verify integrity against system health counts, and prove you can restore. Your brain is only as safe as your backup.",
+          "estimated_minutes": 20,
+          "prerequisites": ["4.7"],
+          "path": "phases/phase-5-multipliers/module-5.3-backup-and-restore",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["knowledge export", "vault export", "integrity verification", "selective restore", "backup habits"],
+          "mcp_tools": ["search_knowledge", "vault_search", "vault_list_categories", "system_health", "add_knowledge", "vault_add"],
+          "theme": "DEFENDERS"
+        },
+        "5.4": {
+          "id": "5.4",
+          "title": "Teach the Teacher",
+          "description": "Build a teaching brain — add beginner-friendly explanations of Ollama, vectors, RAG, MCP, and YourNameBrain to your knowledge base. Test your AI as a teaching assistant.",
+          "estimated_minutes": 15,
+          "prerequisites": ["4.3", "4.2"],
+          "path": "phases/phase-5-multipliers/module-5.4-teach-the-teacher",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["teaching knowledge base", "beginner explanations", "AI teaching assistant", "knowledge transfer", "curriculum design"],
+          "mcp_tools": ["add_knowledge", "search_knowledge", "chat_with_shanebrain"],
+          "theme": "TEACHERS"
+        },
+        "5.5": {
+          "id": "5.5",
+          "title": "Workshop in a Box",
+          "description": "Generate a complete 30-minute workshop script and facilitator checklist using AI drafting. Store them in your vault as reusable teaching assets. One trained person can now train a room.",
+          "estimated_minutes": 20,
+          "prerequisites": ["5.4", "3.3"],
+          "path": "phases/phase-5-multipliers/module-5.5-workshop-in-a-box",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["workshop design", "instructional drafting", "facilitator checklists", "teaching asset management", "group training"],
+          "mcp_tools": ["draft_create", "vault_add", "vault_search", "search_knowledge"],
+          "theme": "TEACHERS"
+        },
+        "5.6": {
+          "id": "5.6",
+          "title": "Brain Export",
+          "description": "Create a structured, portable brain snapshot — knowledge, vault, and notes bundled into a single JSON file with manifest, counts, and checksums. Your brain is not locked to one machine.",
+          "estimated_minutes": 15,
+          "prerequisites": ["5.3"],
+          "path": "phases/phase-5-multipliers/module-5.6-brain-export",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["structured export", "manifest generation", "data portability", "brain packaging", "checksum verification"],
+          "mcp_tools": ["search_knowledge", "vault_search", "vault_list_categories", "daily_note_search", "system_health"],
+          "theme": "CONNECTORS"
+        },
+        "5.7": {
+          "id": "5.7",
+          "title": "Family Mesh",
+          "description": "Simulate a multi-brain family network using knowledge categories as namespaces. Create Dad's brain, Mom's brain, and Kid's brain — then query across them. The architecture of connected brains.",
+          "estimated_minutes": 20,
+          "prerequisites": ["5.6", "4.7"],
+          "path": "phases/phase-5-multipliers/module-5.7-family-mesh",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["multi-brain architecture", "category namespaces", "family knowledge mesh", "cross-brain queries", "social graph modeling"],
+          "mcp_tools": ["add_knowledge", "search_knowledge", "chat_with_shanebrain", "search_friends", "get_top_friends"],
+          "theme": "CONNECTORS"
+        },
+        "5.8": {
+          "id": "5.8",
+          "title": "Under the Hood",
+          "description": "Open the MCP black box. Build JSON-RPC requests by hand, send them with raw curl, capture session IDs, and parse SSE responses. See what mcp-call.py does for you.",
+          "estimated_minutes": 15,
+          "prerequisites": ["1.5", "3.1"],
+          "path": "phases/phase-5-multipliers/module-5.8-under-the-hood",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["MCP protocol", "JSON-RPC 2.0", "HTTP session management", "SSE parsing", "abstraction understanding"],
+          "mcp_tools": ["system_health"],
+          "theme": "BUILDERS v2"
+        },
+        "5.9": {
+          "id": "5.9",
+          "title": "Prompt Chains",
+          "description": "Chain prompts together — one AI response feeds the next. Summarize vault content, analyze themes, generate a mission statement. Three calls, one pipeline, progressively refined output.",
+          "estimated_minutes": 20,
+          "prerequisites": ["1.4", "4.3"],
+          "path": "phases/phase-5-multipliers/module-5.9-prompt-chains",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["prompt chaining", "output-as-input", "progressive refinement", "prompt templates", "context management"],
+          "mcp_tools": ["chat_with_shanebrain", "search_knowledge", "vault_search", "draft_create"],
+          "theme": "BUILDERS v2"
+        },
+        "5.10": {
+          "id": "5.10",
+          "title": "The Multiplier",
+          "description": "The Phase 5 capstone. One exercise, all four themes: harden your system, generate a teaching draft, export a brain snapshot, and make a raw MCP protocol call. Prove you can defend, teach, connect, and build.",
+          "estimated_minutes": 20,
+          "prerequisites": ["5.1", "5.2", "5.3", "5.4", "5.5", "5.6", "5.7", "5.8", "5.9"],
+          "path": "phases/phase-5-multipliers/module-5.10-the-multiplier",
+          "files": ["lesson.md", "exercise.bat", "verify.bat", "hints.md"],
+          "skills_taught": ["full-stack mastery", "cross-theme integration", "multiplier mindset", "system sovereignty", "training graduation"],
+          "mcp_tools": ["system_health", "security_log_search", "search_knowledge", "chat_with_shanebrain", "draft_create", "vault_add", "vault_search", "vault_list_categories", "add_knowledge"],
+          "theme": "CAPSTONE"
+        }
+      }
+    }
+  }
+}

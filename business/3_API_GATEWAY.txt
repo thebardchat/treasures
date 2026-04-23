@@ -1,0 +1,416 @@
+==================================================
+DELIVERABLE #3: API GATEWAY
+Agent: integration_lead
+Priority: HIGH (Do after Auth)
+==================================================
+
+WHAT THIS DOES:
+Single entry point (localhost:3000) that routes requests to all
+your services. One URL to rule them all.
+
+Services it connects:
+- Auth (angelcloud-actual): 3001
+- AI Chat (PortableDadAnswers): 3002
+- Brain (shanebrain-core): 3003
+- LogiBot: 3004
+- Memory: 3005
+
+==================================================
+FILE 1: api-gateway/server.js
+==================================================
+
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+
+const app = express();
+
+// Middleware
+app.use(express.json());
+app.use(cors());
+
+// Service URLs
+const SERVICES = {
+  auth: 'http://localhost:3001',
+  ai: 'http://localhost:3002',
+  brain: 'http://localhost:3003',
+  logibot: 'http://localhost:3004',
+  memory: 'http://localhost:3005'
+};
+
+// Auth verification middleware
+const verifyToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    // Verify with auth service
+    const response = await axios.post(`${SERVICES.auth}/auth/verify`, { token });
+    
+    if (response.data.valid) {
+      req.user = response.data.user;
+      next();
+    } else {
+      res.status(401).json({ error: 'Invalid token' });
+    }
+  } catch (error) {
+    res.status(401).json({ error: 'Authentication failed' });
+  }
+};
+
+// ============================================
+// PUBLIC ROUTES (No auth required)
+// ============================================
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'online', 
+    timestamp: new Date(),
+    services: SERVICES
+  });
+});
+
+// Auth routes (proxied to angelcloud-actual)
+app.post('/auth/register', async (req, res) => {
+  try {
+    const response = await axios.post(`${SERVICES.auth}/auth/register`, req.body);
+    res.json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ 
+      error: error.response?.data?.error || 'Registration failed' 
+    });
+  }
+});
+
+app.post('/auth/login', async (req, res) => {
+  try {
+    const response = await axios.post(`${SERVICES.auth}/auth/login`, req.body);
+    res.json(response.data);
+  } catch (error) {
+    res.status(error.response?.status || 500).json({ 
+      error: error.response?.data?.error || 'Login failed' 
+    });
+  }
+});
+
+// ============================================
+// PROTECTED ROUTES (Require authentication)
+// ============================================
+
+// AI Chat endpoint
+app.post('/ai/chat', verifyToken, async (req, res) => {
+  try {
+    const { message } = req.body;
+    
+    // Send to AI service with user context
+    const response = await axios.post(`${SERVICES.ai}/chat`, {
+      message,
+      userId: req.user.id,
+      userEmail: req.user.email
+    });
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('AI service error:', error.message);
+    res.status(500).json({ error: 'AI service unavailable' });
+  }
+});
+
+// Brain context endpoint
+app.get('/brain/context', verifyToken, async (req, res) => {
+  try {
+    const response = await axios.get(`${SERVICES.brain}/context/${req.user.id}`);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Brain service error:', error.message);
+    res.status(500).json({ error: 'Brain service unavailable' });
+  }
+});
+
+// Brain learning endpoint
+app.post('/brain/learn', verifyToken, async (req, res) => {
+  try {
+    const response = await axios.post(`${SERVICES.brain}/learn`, {
+      ...req.body,
+      userId: req.user.id
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('Brain service error:', error.message);
+    res.status(500).json({ error: 'Learning failed' });
+  }
+});
+
+// LogiBot automation endpoint
+app.post('/automate/trigger', verifyToken, async (req, res) => {
+  try {
+    const response = await axios.post(`${SERVICES.logibot}/trigger`, {
+      ...req.body,
+      userId: req.user.id
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('LogiBot service error:', error.message);
+    res.status(500).json({ error: 'Automation service unavailable' });
+  }
+});
+
+app.get('/automate/status', verifyToken, async (req, res) => {
+  try {
+    const response = await axios.get(`${SERVICES.logibot}/status`);
+    res.json(response.data);
+  } catch (error) {
+    console.error('LogiBot service error:', error.message);
+    res.status(500).json({ error: 'Automation service unavailable' });
+  }
+});
+
+// Memory endpoint
+app.post('/memory/add', verifyToken, async (req, res) => {
+  try {
+    const { memory, source } = req.body;
+    
+    // Store in memory service
+    const memoryResponse = await axios.post(`${SERVICES.memory}/add`, {
+      memory,
+      source: source || 'user',
+      userId: req.user.id
+    });
+    
+    // Also send to brain for learning
+    try {
+      await axios.post(`${SERVICES.brain}/learn`, {
+        content: memory,
+        source: source || 'daily-memory',
+        userId: req.user.id
+      });
+    } catch (brainError) {
+      console.log('Brain learning failed (non-critical):', brainError.message);
+    }
+    
+    res.json(memoryResponse.data);
+  } catch (error) {
+    console.error('Memory service error:', error.message);
+    res.status(500).json({ error: 'Memory service unavailable' });
+  }
+});
+
+// User profile endpoint
+app.get('/profile', verifyToken, (req, res) => {
+  res.json({ user: req.user });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Gateway error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// Start server
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`
+╔══════════════════════════════════════════════════════════╗
+║         SHANE'S API GATEWAY - ONLINE                      ║
+╚══════════════════════════════════════════════════════════╝
+
+   Gateway URL: http://localhost:${PORT}
+
+   Connected Services:
+   ✓ Auth Service:       ${SERVICES.auth}
+   ✓ AI Chat Service:    ${SERVICES.ai}
+   ✓ Brain Service:      ${SERVICES.brain}
+   ✓ LogiBot Service:    ${SERVICES.logibot}
+   ✓ Memory Service:     ${SERVICES.memory}
+
+   Available Routes:
+   - POST /auth/register     (public)
+   - POST /auth/login        (public)
+   - POST /ai/chat           (protected)
+   - GET  /brain/context     (protected)
+   - POST /brain/learn       (protected)
+   - POST /automate/trigger  (protected)
+   - POST /memory/add        (protected)
+   - GET  /profile           (protected)
+   - GET  /health            (public)
+
+   Ready to handle requests!
+`);
+});
+
+==================================================
+FILE 2: api-gateway/package.json
+==================================================
+
+{
+  "name": "api-gateway",
+  "version": "1.0.0",
+  "description": "Shane's API Gateway - Single entry point for all services",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
+
+==================================================
+FILE 3: api-gateway/.env.example
+==================================================
+
+# Copy this to .env and fill in values
+PORT=3000
+
+# Service URLs
+AUTH_SERVICE=http://localhost:3001
+AI_SERVICE=http://localhost:3002
+BRAIN_SERVICE=http://localhost:3003
+LOGIBOT_SERVICE=http://localhost:3004
+MEMORY_SERVICE=http://localhost:3005
+
+==================================================
+INSTALLATION STEPS
+==================================================
+
+1. Create gateway folder:
+   cd C:\Users\Shane\Desktop
+   mkdir api-gateway
+   cd api-gateway
+
+2. Copy server.js and package.json above
+
+3. Install dependencies:
+   npm install
+
+4. Start gateway:
+   npm start
+
+   Should see the ASCII art banner with all services listed
+
+==================================================
+TESTING THE GATEWAY
+==================================================
+
+TEST 1: Health Check
+curl http://localhost:3000/health
+
+TEST 2: Register User
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"shane@test.com","password":"test123"}'
+
+# Copy the token from response
+
+TEST 3: AI Chat (Protected)
+curl -X POST http://localhost:3000/ai/chat \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Hello, help me automate my business"}'
+
+TEST 4: Add Memory (Protected)
+curl -X POST http://localhost:3000/memory/add \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{"memory":"I prefer direct communication","source":"user-preference"}'
+
+TEST 5: Trigger Automation (Protected)
+curl -X POST http://localhost:3000/automate/trigger \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{"triggerType":"email-received","data":{"from":"customer@test.com","subject":"Need quote"}}'
+
+TEST 6: Get Profile (Protected)
+curl http://localhost:3000/profile \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+==================================================
+START ALL SERVICES SCRIPT
+==================================================
+
+Create: start-all-services.bat
+
+@echo off
+echo Starting Shane's AI Empire...
+echo.
+
+start "Auth Service" cmd /k "cd C:\Users\Shane\Desktop\angelcloud-actual && npm start"
+timeout /t 3
+
+start "AI Chat" cmd /k "cd C:\Users\Shane\Desktop\PortableDadAnswers && npm start"
+timeout /t 3
+
+start "Brain" cmd /k "cd C:\Users\Shane\Desktop\shanebrain-core && node server.js"
+timeout /t 3
+
+start "LogiBot" cmd /k "cd C:\Users\Shane\Desktop\logibot-core && npm start"
+timeout /t 3
+
+start "API Gateway" cmd /k "cd C:\Users\Shane\Desktop\api-gateway && npm start"
+
+echo.
+echo ✓ All services starting...
+echo.
+echo Access via API Gateway: http://localhost:3000
+echo.
+pause
+
+==================================================
+INTEGRATION WITH FRONTEND
+==================================================
+
+Update myprojectfolder to use gateway URL:
+
+// In your frontend config
+const API_BASE_URL = 'http://localhost:3000';
+
+// Login
+const login = async (email, password) => {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await response.json();
+  localStorage.setItem('token', data.token);
+  return data;
+};
+
+// Chat with AI
+const chat = async (message) => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/ai/chat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ message })
+  });
+  return response.json();
+};
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+✓ Gateway running on port 3000
+✓ All services accessible through gateway
+✓ Single login works across all services
+✓ Requests properly routed
+✓ Auth middleware protects endpoints
+
+==================================================
+NEXT: Implement Memory Pipeline (Deliverable #4)
+==================================================

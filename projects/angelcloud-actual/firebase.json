@@ -1,0 +1,8 @@
+{
+  "firestore": {
+    "database": "angel-cloud-ai-master-db",
+    "location": "us-south1",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

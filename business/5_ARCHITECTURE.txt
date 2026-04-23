@@ -1,0 +1,398 @@
+==================================================
+DELIVERABLE #5: SYSTEM ARCHITECTURE
+Agent: architect
+Priority: MEDIUM (Reference doc)
+==================================================
+
+WHAT THIS IS:
+Complete system architecture showing how all your projects
+connect together. Includes testing scripts and deployment guide.
+
+==================================================
+SYSTEM DIAGRAM
+==================================================
+
+                     ┌─────────────────────┐
+                     │   USERS / CLIENTS   │
+                     │  (Browser/Mobile)   │
+                     └──────────┬──────────┘
+                                │
+                                ▼
+                     ┌─────────────────────┐
+                     │   API GATEWAY       │
+                     │   localhost:3000    │
+                     │  (Single Entry)     │
+                     └──────────┬──────────┘
+                                │
+                 ┌──────────────┼──────────────┐
+                 │              │              │
+                 ▼              ▼              ▼
+        ┌────────────┐  ┌────────────┐  ┌────────────┐
+        │   AUTH     │  │  AI CHAT   │  │   BRAIN    │
+        │   :3001    │  │   :3002    │  │   :3003    │
+        │ angelcloud │  │ Portable   │  │ shanebrain │
+        │  -actual   │  │   Dad      │  │   -core    │
+        └────────────┘  └────────────┘  └────────────┘
+                 │              │              │
+                 └──────────────┼──────────────┘
+                                │
+                 ┌──────────────┼──────────────┐
+                 │              │              │
+                 ▼              ▼              ▼
+        ┌────────────┐  ┌────────────┐  ┌────────────┐
+        │  LOGIBOT   │  │   MEMORY   │  │  DATABASE  │
+        │   :3004    │  │   :3005    │  │  (SQLite/  │
+        │ automation │  │   daily-   │  │   JSON)    │
+        │   engine   │  │  memory    │  │            │
+        └────────────┘  └────────────┘  └────────────┘
+
+==================================================
+DATA FLOW
+==================================================
+
+1. USER LOGIN:
+   User → Gateway → Auth Service → JWT Token → User
+
+2. AI CHAT WITH CONTEXT:
+   User → Gateway → AI Chat → Brain (get context) → AI Response → User
+   └─> Brain (log interaction)
+
+3. MEMORY ADDITION:
+   User → Gateway → Memory Service → Brain (learn) → Confirmation
+
+4. AUTOMATION TRIGGER:
+   Event → Gateway → LogiBot → Action → Notification
+
+==================================================
+PORT ASSIGNMENTS
+==================================================
+
+Service                Port    Location
+─────────────────────  ─────   ──────────────────────────
+API Gateway            3000    C:\Users\Shane\Desktop\api-gateway
+Auth (angelcloud)      3001    C:\Users\Shane\Desktop\angelcloud-actual
+AI Chat (PDA)          3002    C:\Users\Shane\Desktop\PortableDadAnswers
+Brain (ShaneBrain)     3003    C:\Users\Shane\Desktop\shanebrain-core
+LogiBot                3004    C:\Users\Shane\Desktop\logibot-core
+Memory                 3005    C:\Users\Shane\Desktop\daily-memory-updated
+
+==================================================
+API ENDPOINTS REFERENCE
+==================================================
+
+PUBLIC ENDPOINTS (No auth):
+├── POST /auth/register          Register new user
+├── POST /auth/login             Login existing user
+└── GET  /health                 System health check
+
+PROTECTED ENDPOINTS (Require Bearer token):
+├── POST /ai/chat                Chat with AI
+├── GET  /brain/context          Get user context
+├── POST /brain/learn            Add learning
+├── POST /automate/trigger       Trigger automation
+├── POST /memory/add             Add memory
+└── GET  /profile                Get user profile
+
+==================================================
+COMPLETE START SCRIPT
+==================================================
+
+FILE: start-all-services.bat
+
+@echo off
+cls
+echo ========================================
+echo STARTING SHANE'S AI EMPIRE
+echo ========================================
+echo.
+
+REM Check if services are already running
+tasklist /FI "WINDOWTITLE eq Auth Service*" 2>NUL | find /I /N "node.exe">NUL
+if "%ERRORLEVEL%"=="0" (
+    echo Services already running!
+    echo.
+    choice /C YN /M "Restart all services?"
+    if errorlevel 2 goto :menu
+    echo Stopping existing services...
+    taskkill /FI "WINDOWTITLE eq *Service*" /F 2>NUL
+    timeout /t 2 >NUL
+)
+
+echo Starting services...
+echo.
+
+REM Start Auth Service (angelcloud-actual)
+echo [1/5] Starting Auth Service...
+start "Auth Service" cmd /k "cd C:\Users\Shane\Desktop\angelcloud-actual && npm start"
+timeout /t 4 >NUL
+
+REM Start AI Chat (PortableDadAnswers)
+echo [2/5] Starting AI Chat Service...
+start "AI Chat Service" cmd /k "cd C:\Users\Shane\Desktop\PortableDadAnswers && npm start"
+timeout /t 4 >NUL
+
+REM Start Brain (shanebrain-core)
+echo [3/5] Starting Brain Service...
+start "Brain Service" cmd /k "cd C:\Users\Shane\Desktop\shanebrain-core && node server.js"
+timeout /t 4 >NUL
+
+REM Start LogiBot
+echo [4/5] Starting LogiBot...
+start "LogiBot Service" cmd /k "cd C:\Users\Shane\Desktop\logibot-core && npm start"
+timeout /t 4 >NUL
+
+REM Start API Gateway (last, so it can connect to all services)
+echo [5/5] Starting API Gateway...
+start "API Gateway" cmd /k "cd C:\Users\Shane\Desktop\api-gateway && npm start"
+timeout /t 5 >NUL
+
+echo.
+echo ========================================
+echo ALL SERVICES STARTED
+echo ========================================
+echo.
+echo Gateway URL: http://localhost:3000
+echo.
+echo Opening test page in browser...
+start http://localhost:3000/health
+echo.
+
+:menu
+echo ========================================
+echo QUICK ACTIONS
+echo ========================================
+echo 1. Test Login Flow
+echo 2. Test AI Chat
+echo 3. Open Logs
+echo 4. Stop All Services
+echo 5. Exit
+echo.
+choice /C 12345 /N /M "Select option (1-5): "
+
+if errorlevel 5 goto :end
+if errorlevel 4 goto :stop
+if errorlevel 3 goto :logs
+if errorlevel 2 goto :testchat
+if errorlevel 1 goto :testlogin
+
+:testlogin
+echo.
+echo Testing Login Flow...
+curl -X POST http://localhost:3000/auth/login -H "Content-Type: application/json" -d "{\"email\":\"shane@test.com\",\"password\":\"test123\"}"
+echo.
+pause
+goto :menu
+
+:testchat
+echo.
+set /p TOKEN="Enter your auth token: "
+echo Testing AI Chat...
+curl -X POST http://localhost:3000/ai/chat -H "Authorization: Bearer %TOKEN%" -H "Content-Type: application/json" -d "{\"message\":\"Hello AI\"}"
+echo.
+pause
+goto :menu
+
+:logs
+echo Opening log windows...
+REM Logs are in each service window
+echo Check each service window for logs
+pause
+goto :menu
+
+:stop
+echo.
+echo Stopping all services...
+taskkill /FI "WINDOWTITLE eq *Service*" /F
+taskkill /FI "WINDOWTITLE eq API Gateway*" /F
+echo.
+echo All services stopped.
+timeout /t 2 >NUL
+goto :end
+
+:end
+echo.
+echo Goodbye!
+timeout /t 2 >NUL
+exit
+
+==================================================
+TESTING CHECKLIST
+==================================================
+
+□ Step 1: Start all services
+   Run: start-all-services.bat
+   Verify: 5 command windows open
+
+□ Step 2: Health check
+   curl http://localhost:3000/health
+   Expect: {"status":"online",...}
+
+□ Step 3: Register user
+   curl -X POST http://localhost:3000/auth/register \
+     -H "Content-Type: application/json" \
+     -d '{"email":"test@test.com","password":"pass123"}'
+   Expect: {"token":"...", "user":{...}}
+
+□ Step 4: Login
+   curl -X POST http://localhost:3000/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"test@test.com","password":"pass123"}'
+   Expect: {"token":"...", "user":{...}}
+   SAVE THE TOKEN!
+
+□ Step 5: AI Chat
+   curl -X POST http://localhost:3000/ai/chat \
+     -H "Authorization: Bearer YOUR_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"message":"Help me automate my business"}'
+   Expect: {"response":"..."}
+
+□ Step 6: Add Memory
+   curl -X POST http://localhost:3000/memory/add \
+     -H "Authorization: Bearer YOUR_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"memory":"I prefer direct communication"}'
+   Expect: {"success":true,...}
+
+□ Step 7: Get Context
+   curl http://localhost:3000/brain/context \
+     -H "Authorization: Bearer YOUR_TOKEN"
+   Expect: {"context":"...I prefer direct communication..."}
+
+□ Step 8: Trigger Automation
+   curl -X POST http://localhost:3000/automate/trigger \
+     -H "Authorization: Bearer YOUR_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"triggerType":"email-received","data":{"from":"customer@test.com"}}'
+   Expect: {"success":true,"executed":[...]}
+
+==================================================
+FRONTEND INTEGRATION
+==================================================
+
+Update myprojectfolder/src/config.js:
+
+export const API_CONFIG = {
+  baseUrl: 'http://localhost:3000',
+  endpoints: {
+    login: '/auth/login',
+    register: '/auth/register',
+    chat: '/ai/chat',
+    memory: '/memory/add',
+    automate: '/automate/trigger',
+    profile: '/profile'
+  }
+};
+
+Example login function:
+
+import { API_CONFIG } from './config';
+
+export async function login(email, password) {
+  const response = await fetch(
+    `${API_CONFIG.baseUrl}${API_CONFIG.endpoints.login}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error('Login failed');
+  }
+  
+  const data = await response.json();
+  localStorage.setItem('authToken', data.token);
+  return data.user;
+}
+
+==================================================
+DEPLOYMENT CONSIDERATIONS
+==================================================
+
+FOR PRODUCTION:
+
+1. Environment Variables:
+   - Set JWT_SECRET to secure random string
+   - Use production database URLs
+   - Configure CORS for your domain
+
+2. Process Management:
+   - Use PM2 to keep services running
+   - Auto-restart on crash
+   - Log aggregation
+
+3. Reverse Proxy:
+   - Nginx in front of Gateway
+   - SSL/TLS certificates
+   - Load balancing if needed
+
+4. Database:
+   - Move from SQLite to PostgreSQL
+   - Set up backups
+   - Connection pooling
+
+5. Monitoring:
+   - Health check endpoints
+   - Error tracking (Sentry)
+   - Performance monitoring
+
+==================================================
+WEEK 2 PREPARATION
+==================================================
+
+After implementing Week 1, you'll be ready for:
+
+□ Payment Integration (Stripe)
+  - Subscription tiers (Free/Pro/Enterprise)
+  - Usage tracking
+  - Billing automation
+
+□ User Management Dashboard
+  - Admin panel
+  - User analytics
+  - System monitoring
+
+□ Rate Limiting & Caching
+  - Redis for caching
+  - Rate limits per tier
+  - Request throttling
+
+□ Advanced AI Features
+  - Vector embeddings
+  - Semantic search
+  - Conversation memory
+
+□ Production Deploy
+  - Cloud hosting setup
+  - Domain configuration
+  - SSL certificates
+
+==================================================
+SUCCESS METRICS
+==================================================
+
+After Week 1 implementation, you should have:
+
+✓ All 5 services communicating
+✓ Single login across all features
+✓ AI chat with personalized context
+✓ Automatic memory learning
+✓ Business automation working
+✓ ~5 hours implementation time
+✓ Ready for monetization (Week 2)
+
+==================================================
+SUPPORT & NEXT STEPS
+==================================================
+
+Issues? Check:
+1. All services running (5 windows)
+2. Ports not conflicting (3000-3005)
+3. npm install completed for each service
+4. Token being sent correctly
+
+Next: Run team_assemble.bat again for Week 2 tasks
+
+==================================================

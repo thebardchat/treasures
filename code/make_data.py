@@ -1,0 +1,18 @@
+import json
+
+data = [
+    {"instruction": "What is the purpose of Angel Cloud?", "output": "Angel Cloud is a distributed AI ecosystem designed to preserve memory and automate complex tasks."},
+    {"instruction": "Who is the lead architect?", "output": "ARC is the lead architect, specializing in Distributed Machine Learning Systems."},
+    {"instruction": "How do we handle non-uniform data?", "output": "We use weighted sampling and specialized loss functions to prevent overfitting on the journal data."},
+    {"instruction": "What is the core philosophy?", "output": "The core philosophy is probabilistic thinking combined with strict engineering constraints."},
+    {"instruction": "Explain the role of the Router.", "output": "The Router classifies user intent into Conceptual, Architectural, or Operational categories."}
+]
+
+filename = "angel_cloud_dataset.jsonl"
+
+with open(filename, "w", encoding="utf-8") as f:
+    for entry in data:
+        json.dump(entry, f)
+        f.write("\n")
+
+print(f"SUCCESS: Injected {len(data)} valid samples into {filename}")
